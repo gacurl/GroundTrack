@@ -338,6 +338,76 @@ def import_participants_from_workbook(file_storage):
     )
 
 
+def local_timestamp():
+    return datetime.now().isoformat(sep=" ", timespec="seconds")
+
+
+def is_currently_on_ground(participant):
+    in_process_at = participant["in_process_at"]
+    out_process_at = participant["out_process_at"]
+
+    return bool(in_process_at) and (
+        not out_process_at or out_process_at < in_process_at
+    )
+
+
+def find_participant_by_badge(badge_number):
+    return get_db().execute(
+        """
+        SELECT id, name, badge_number, in_process_at, out_process_at
+        FROM participants
+        WHERE badge_number = ?
+        ORDER BY id
+        LIMIT 1
+        """,
+        (badge_number,),
+    ).fetchone()
+
+
+def check_in_participant(badge_number):
+    try:
+        participant = find_participant_by_badge(badge_number)
+    except sqlite3.OperationalError:
+        return "error", "Local database is not initialized. Run flask init-db first."
+
+    if participant is None:
+        return "error", f"Badge not found: {badge_number}."
+
+    if is_currently_on_ground(participant):
+        return (
+            "already",
+            f"{participant['name']} is already checked in.",
+        )
+
+    timestamp = local_timestamp()
+    db = get_db()
+    db.execute(
+        """
+        UPDATE participants
+        SET in_process_at = ?,
+            out_process_at = NULL,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (timestamp, timestamp, participant["id"]),
+    )
+    db.execute(
+        """
+        INSERT INTO activity_log (participant_id, action, badge_number, note)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            participant["id"],
+            "CHECK_IN",
+            participant["badge_number"],
+            "Checked in from scan screen",
+        ),
+    )
+    db.commit()
+
+    return "checked_in", f"Checked in {participant['name']}."
+
+
 @app.route("/")
 def dashboard():
     counts, database_ready = get_dashboard_counts()
@@ -388,9 +458,10 @@ def scan():
             message = "Missing badge number."
             message_type = "error"
         elif action == "check_in":
-            message = "Check-in behavior will be added in Issue 3-2."
-            message_type = "success"
-            badge_number = ""
+            check_in_status, message = check_in_participant(badge_number)
+            message_type = "error" if check_in_status == "error" else "success"
+            if check_in_status in {"checked_in", "already"}:
+                badge_number = ""
         elif action == "check_out":
             message = "Check-out behavior will be added in Issue 3-3."
             message_type = "success"
