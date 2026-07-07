@@ -180,6 +180,57 @@ h2 {
   background: var(--accent-dark);
 }
 
+.data-form {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 720px;
+  padding: 22px;
+}
+
+.data-form label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.data-form input {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: block;
+  font: inherit;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.data-form input:focus {
+  border-color: var(--accent);
+  outline: 3px solid rgba(23, 105, 170, 0.18);
+}
+
+.data-form button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.data-form button:hover,
+.data-form button:focus {
+  background: var(--accent-dark);
+}
+
+.required-label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
 .expected-columns {
   max-width: 720px;
 }
