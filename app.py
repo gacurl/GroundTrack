@@ -408,6 +408,49 @@ def check_in_participant(badge_number):
     return "checked_in", f"Checked in {participant['name']}."
 
 
+def check_out_participant(badge_number):
+    try:
+        participant = find_participant_by_badge(badge_number)
+    except sqlite3.OperationalError:
+        return "error", "Local database is not initialized. Run flask init-db first."
+
+    if participant is None:
+        return "error", f"Badge not found: {badge_number}."
+
+    if not is_currently_on_ground(participant):
+        return (
+            "not_on_ground",
+            f"{participant['name']} is not currently checked in.",
+        )
+
+    timestamp = local_timestamp()
+    db = get_db()
+    db.execute(
+        """
+        UPDATE participants
+        SET out_process_at = ?,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (timestamp, timestamp, participant["id"]),
+    )
+    db.execute(
+        """
+        INSERT INTO activity_log (participant_id, action, badge_number, note)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            participant["id"],
+            "CHECK_OUT",
+            participant["badge_number"],
+            "Checked out from scan screen",
+        ),
+    )
+    db.commit()
+
+    return "checked_out", f"Checked out {participant['name']}."
+
+
 @app.route("/")
 def dashboard():
     counts, database_ready = get_dashboard_counts()
@@ -463,9 +506,10 @@ def scan():
             if check_in_status in {"checked_in", "already"}:
                 badge_number = ""
         elif action == "check_out":
-            message = "Check-out behavior will be added in Issue 3-3."
-            message_type = "success"
-            badge_number = ""
+            check_out_status, message = check_out_participant(badge_number)
+            message_type = "error" if check_out_status == "error" else "success"
+            if check_out_status in {"checked_out", "not_on_ground"}:
+                badge_number = ""
         else:
             message = "Choose Check In or Check Out."
             message_type = "error"
