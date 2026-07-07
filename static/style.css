@@ -209,6 +209,19 @@ h2 {
   outline: 3px solid rgba(23, 105, 170, 0.18);
 }
 
+.data-form input[type="checkbox"] {
+  display: inline-block;
+  margin: 0;
+  width: auto;
+}
+
+.checkbox-field {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
 .data-form button {
   background: var(--accent);
   border: 0;

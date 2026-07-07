@@ -49,6 +49,17 @@
       value="{{ form.thread_initiative }}"
     >
 
+    <label class="checkbox-field" for="check_in_now">
+      <input
+        id="check_in_now"
+        name="check_in_now"
+        type="checkbox"
+        value="1"
+        {% if form.check_in_now %}checked{% endif %}
+      >
+      Check in now
+    </label>
+
     <button type="submit">Add Walk-Up Participant</button>
   </form>
 {% endblock %}

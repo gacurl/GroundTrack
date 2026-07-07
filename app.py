@@ -340,6 +340,7 @@ def blank_walk_up_form():
         "badge_number": "",
         "organization": "",
         "thread_initiative": "",
+        "check_in_now": False,
     }
 
 
@@ -352,11 +353,13 @@ def walk_up_form_data():
         "badge_number": form_value("badge_number") or "",
         "organization": form_value("organization") or "",
         "thread_initiative": form_value("thread_initiative") or "",
+        "check_in_now": request.form.get("check_in_now") == "1",
     }
 
 
 def create_walk_up_participant(participant):
     db = get_db()
+    in_process_at = local_timestamp() if participant["check_in_now"] else None
     cursor = db.execute(
         """
         INSERT INTO participants (
@@ -367,8 +370,9 @@ def create_walk_up_participant(participant):
             badge_number,
             organization,
             thread_initiative,
+            in_process_at,
             is_walkup
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             participant["name"],
@@ -378,6 +382,7 @@ def create_walk_up_participant(participant):
             participant["badge_number"] or None,
             participant["organization"] or None,
             participant["thread_initiative"] or None,
+            in_process_at,
             1,
         ),
     )
@@ -394,6 +399,13 @@ def create_walk_up_participant(participant):
         ),
     )
     db.commit()
+
+
+def walk_up_success_redirect(participant):
+    query = {"created": participant["name"]}
+    if participant["check_in_now"]:
+        query["checked_in"] = "1"
+    return redirect(url_for("walk_up", **query))
 
 
 def import_participants_from_workbook(file_storage):
@@ -689,7 +701,13 @@ def walk_up():
     form = blank_walk_up_form()
 
     if request.args.get("created"):
-        message = f"Added walk-up participant {request.args['created']}."
+        if request.args.get("checked_in"):
+            message = (
+                f"Added walk-up participant {request.args['created']} "
+                "and checked them in."
+            )
+        else:
+            message = f"Added walk-up participant {request.args['created']}."
         message_type = "success"
 
     if request.method == "POST":
@@ -705,14 +723,14 @@ def walk_up():
                     message_type = "error"
                 else:
                     create_walk_up_participant(form)
-                    return redirect(url_for("walk_up", created=form["name"]))
+                    return walk_up_success_redirect(form)
             except sqlite3.OperationalError:
                 message = "Local database is not initialized. Run flask init-db first."
                 message_type = "error"
         else:
             try:
                 create_walk_up_participant(form)
-                return redirect(url_for("walk_up", created=form["name"]))
+                return walk_up_success_redirect(form)
             except sqlite3.OperationalError:
                 message = "Local database is not initialized. Run flask init-db first."
                 message_type = "error"
