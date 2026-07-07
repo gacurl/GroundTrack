@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Participants - GroundTrack{% endblock %}
+{% block title %}On-Ground Report - GroundTrack{% endblock %}
 
 {% block content %}
   <a class="back-link" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
 
   <section class="page-header">
     <p class="eyebrow">GroundTrack</p>
-    <h1>Participants</h1>
-    <p class="lead">Imported participant records for event operations.</p>
+    <h1>On-Ground Report</h1>
+    <p class="lead">Participants currently checked in and not checked out.</p>
   </section>
 
   {% if participants %}
@@ -21,9 +21,9 @@
             <th>NAT</th>
             <th>Visit Request Status</th>
             <th>Badge #</th>
+            <th>In-Process Date/Time</th>
             <th>Unit / Organization / Company</th>
             <th>Mission Area / Initiative</th>
-            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -34,15 +34,15 @@
               <td>{{ participant.nat or "—" }}</td>
               <td>{{ participant.visit_request_status or "—" }}</td>
               <td>{{ participant.badge_number or "—" }}</td>
+              <td>{{ participant.in_process_at }}</td>
               <td>{{ participant.organization or "—" }}</td>
               <td>{{ participant.thread_initiative or "—" }}</td>
-              <td>{{ participant.status }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% else %}
-    <p class="empty-state">No participants have been imported yet.</p>
+    <p class="empty-state">Nobody is currently on ground.</p>
   {% endif %}
 {% endblock %}
