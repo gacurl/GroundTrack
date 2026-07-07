@@ -41,7 +41,10 @@ class WalkUpPageTest(unittest.TestCase):
         self.assertIn("Walk-Up", body)
         self.assertIn("Add Walk-Up Participant", body)
         self.assertIn('name="name"', body)
+        self.assertIn('name="nat"', body)
         self.assertIn('name="badge_number"', body)
+        self.assertIn('name="thread_initiative"', body)
+        self.assertIn("Mission Area / Initiative", body)
         self.assertIn('name="check_in_now"', body)
         self.assertIn("Check in now", body)
         self.assertIn("← Back to Dashboard", body)
@@ -93,7 +96,9 @@ class WalkUpPageTest(unittest.TestCase):
             "/walk-up",
             data={
                 "name": "Katherine Johnson",
+                "nat": "US",
                 "badge_number": "W101",
+                "thread_initiative": "Alpha",
                 "check_in_now": "1",
             },
             follow_redirects=True,
@@ -126,7 +131,9 @@ class WalkUpPageTest(unittest.TestCase):
             "/walk-up",
             data={
                 "name": "Grace Hopper",
-                "badge_number": "",
+                "nat": "US",
+                "badge_number": "W102",
+                "thread_initiative": "Bravo",
             },
         )
 
@@ -142,7 +149,9 @@ class WalkUpPageTest(unittest.TestCase):
             "/walk-up",
             data={
                 "name": "Mary Jackson",
-                "badge_number": "",
+                "nat": "US",
+                "badge_number": "W103",
+                "thread_initiative": "Charlie",
                 "check_in_now": "1",
             },
         )
@@ -159,7 +168,9 @@ class WalkUpPageTest(unittest.TestCase):
             "/walk-up",
             data={
                 "name": "   ",
+                "nat": "US",
                 "badge_number": "W200",
+                "thread_initiative": "Delta",
             },
         )
 
@@ -181,7 +192,9 @@ class WalkUpPageTest(unittest.TestCase):
             "/walk-up",
             data={
                 "name": "New Person",
+                "nat": "US",
                 "badge_number": "W300",
+                "thread_initiative": "Echo",
             },
         )
 
@@ -195,6 +208,31 @@ class WalkUpPageTest(unittest.TestCase):
             ).fetchone()["count"]
 
         self.assertEqual(count, 1)
+
+    def test_required_nat_badge_and_mission_area_are_rejected(self):
+        response = self.client.post(
+            "/walk-up",
+            data={
+                "name": "New Person",
+                "nat": " ",
+                "badge_number": "",
+                "thread_initiative": " ",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn(
+            "Missing required fields: NAT, Badge #, Mission Area / Initiative.",
+            body,
+        )
+
+        with app.app_context():
+            count = get_db().execute(
+                "SELECT COUNT(*) AS count FROM participants"
+            ).fetchone()["count"]
+
+        self.assertEqual(count, 0)
 
 
 if __name__ == "__main__":

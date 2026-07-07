@@ -24,8 +24,8 @@
     <label for="rank">Rank</label>
     <input id="rank" name="rank" type="text" value="{{ form.rank }}">
 
-    <label for="nat">NAT</label>
-    <input id="nat" name="nat" type="text" value="{{ form.nat }}">
+    <label for="nat">NAT <span class="required-label">Required</span></label>
+    <input id="nat" name="nat" type="text" value="{{ form.nat }}" required>
 
     <label for="visit_request_status">Visit Request Status</label>
     <input
@@ -35,18 +35,27 @@
       value="{{ form.visit_request_status }}"
     >
 
-    <label for="badge_number">Badge #</label>
-    <input id="badge_number" name="badge_number" type="text" value="{{ form.badge_number }}">
+    <label for="badge_number">Badge # <span class="required-label">Required</span></label>
+    <input
+      id="badge_number"
+      name="badge_number"
+      type="text"
+      value="{{ form.badge_number }}"
+      required
+    >
 
     <label for="organization">Unit / Organization / Company</label>
     <input id="organization" name="organization" type="text" value="{{ form.organization }}">
 
-    <label for="thread_initiative">Thread / Initiative</label>
+    <label for="thread_initiative">
+      Mission Area / Initiative <span class="required-label">Required</span>
+    </label>
     <input
       id="thread_initiative"
       name="thread_initiative"
       type="text"
       value="{{ form.thread_initiative }}"
+      required
     >
 
     <label class="checkbox-field" for="check_in_now">

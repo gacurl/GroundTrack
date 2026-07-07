@@ -408,6 +408,15 @@ def walk_up_success_redirect(participant):
     return redirect(url_for("walk_up", **query))
 
 
+def missing_walk_up_required_fields(form):
+    required_fields = [
+        ("nat", "NAT"),
+        ("badge_number", "Badge #"),
+        ("thread_initiative", "Mission Area / Initiative"),
+    ]
+    return [label for field, label in required_fields if not form[field]]
+
+
 def import_participants_from_workbook(file_storage):
     workbook, data_sheet, header_map, error = open_import_workbook(file_storage)
     if error:
@@ -615,6 +624,33 @@ def get_participants():
     return participants
 
 
+def get_on_ground_participants():
+    try:
+        return get_db().execute(
+            """
+            SELECT
+                name,
+                rank,
+                nat,
+                visit_request_status,
+                badge_number,
+                in_process_at,
+                organization,
+                thread_initiative
+            FROM participants
+            WHERE in_process_at IS NOT NULL
+                AND in_process_at != ''
+                AND (
+                    out_process_at IS NULL
+                    OR out_process_at = ''
+                )
+            ORDER BY name COLLATE NOCASE, id
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+
 @app.route("/")
 def dashboard():
     counts, database_ready = get_dashboard_counts()
@@ -716,6 +752,10 @@ def walk_up():
         if not form["name"]:
             message = "Name is required."
             message_type = "error"
+        elif missing_fields := missing_walk_up_required_fields(form):
+            missing_fields = ", ".join(missing_fields)
+            message = f"Missing required fields: {missing_fields}."
+            message_type = "error"
         elif form["badge_number"]:
             try:
                 if form["badge_number"] in existing_badge_numbers():
@@ -746,9 +786,8 @@ def walk_up():
 @app.route("/on-ground")
 def on_ground_report():
     return render_template(
-        "placeholder.html",
-        title="On-Ground Report",
-        message="Current on-ground reporting will be added after check-in support exists.",
+        "on_ground.html",
+        participants=get_on_ground_participants(),
     )
 
 
