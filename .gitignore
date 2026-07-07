@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# Flask
+instance/
+.webassets-cache
+
+# SQLite / local data
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads / imported files
+uploads/*
+!uploads/.gitkeep
+
+# Environment variables
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
