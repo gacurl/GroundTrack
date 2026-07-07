@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - GroundTrack{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Local event operations</p>
+    <h1>GroundTrack</h1>
+    <p class="lead">Fast in-processing and out-processing support for event operators.</p>
+  </section>
+
+  <section class="quick-links" aria-labelledby="quick-links-heading">
+    <h2 id="quick-links-heading">Operator Quick Links</h2>
+    <div class="link-grid">
+      <a class="quick-link" href="{{ url_for('import_page') }}">
+        <strong>Import</strong>
+        <span>Load the event spreadsheet.</span>
+      </a>
+      <a class="quick-link" href="{{ url_for('scan') }}">
+        <strong>Scan</strong>
+        <span>Scan or enter badge numbers.</span>
+      </a>
+      <a class="quick-link" href="{{ url_for('participants') }}">
+        <strong>Participants</strong>
+        <span>Review participant records.</span>
+      </a>
+      <a class="quick-link" href="{{ url_for('walk_up') }}">
+        <strong>Walk-Up</strong>
+        <span>Add walk-up participants.</span>
+      </a>
+      <a class="quick-link" href="{{ url_for('on_ground_report') }}">
+        <strong>On-Ground Report</strong>
+        <span>See who is currently on ground.</span>
+      </a>
+    </div>
+  </section>
+{% endblock %}
