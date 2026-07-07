@@ -374,12 +374,36 @@ def import_page():
     )
 
 
-@app.route("/scan")
+@app.route("/scan", methods=["GET", "POST"])
 def scan():
+    message = None
+    message_type = None
+    badge_number = ""
+
+    if request.method == "POST":
+        badge_number = request.form.get("badge_number", "").strip()
+        action = request.form.get("action")
+
+        if not badge_number:
+            message = "Missing badge number."
+            message_type = "error"
+        elif action == "check_in":
+            message = "Check-in behavior will be added in Issue 3-2."
+            message_type = "success"
+            badge_number = ""
+        elif action == "check_out":
+            message = "Check-out behavior will be added in Issue 3-3."
+            message_type = "success"
+            badge_number = ""
+        else:
+            message = "Choose Check In or Check Out."
+            message_type = "error"
+
     return render_template(
-        "placeholder.html",
-        title="Scan",
-        message="Badge scan and check-in/check-out actions will be added later.",
+        "scan.html",
+        message=message,
+        message_type=message_type,
+        badge_number=badge_number,
     )
 
 
