@@ -8,7 +8,7 @@
   <section class="page-header">
     <p class="eyebrow">GroundTrack</p>
     <h1>Import</h1>
-    <p class="lead">Upload the event registration spreadsheet for validation.</p>
+    <p class="lead">Upload the event registration spreadsheet to import participants.</p>
   </section>
 
   {% if message %}
@@ -20,7 +20,7 @@
   <form class="upload-form" action="{{ url_for('import_page') }}" method="post" enctype="multipart/form-data">
     <label for="spreadsheet">Spreadsheet file</label>
     <input id="spreadsheet" name="spreadsheet" type="file" accept=".xlsx">
-    <button type="submit">Validate Spreadsheet</button>
+    <button type="submit">Import Spreadsheet</button>
   </form>
 
   <section class="expected-columns" aria-labelledby="expected-columns-heading">
