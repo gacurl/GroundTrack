@@ -255,6 +255,50 @@ h2 {
   filter: brightness(0.9);
 }
 
+.table-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.participants-table {
+  border-collapse: collapse;
+  min-width: 980px;
+  width: 100%;
+}
+
+.participants-table th,
+.participants-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.participants-table th {
+  background: #eef2f6;
+  font-size: 15px;
+}
+
+.participants-table td {
+  font-size: 16px;
+}
+
+.participants-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.empty-state {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-weight: 700;
+  max-width: 640px;
+  padding: 20px;
+}
+
 .dashboard-stats {
   margin-bottom: 32px;
 }

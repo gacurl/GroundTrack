@@ -495,6 +495,44 @@ def check_out_participant(badge_number):
     return "checked_out", f"Checked out {participant['name']}."
 
 
+def participant_status(participant):
+    if is_currently_on_ground(participant):
+        return "On Ground"
+    if participant["in_process_at"]:
+        return "Off Ground"
+    return "Not Checked In"
+
+
+def get_participants():
+    try:
+        rows = get_db().execute(
+            """
+            SELECT
+                name,
+                rank,
+                nat,
+                visit_request_status,
+                badge_number,
+                organization,
+                thread_initiative,
+                in_process_at,
+                out_process_at
+            FROM participants
+            ORDER BY name COLLATE NOCASE, id
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+    participants = []
+    for row in rows:
+        participant = dict(row)
+        participant["status"] = participant_status(row)
+        participants.append(participant)
+
+    return participants
+
+
 @app.route("/")
 def dashboard():
     counts, database_ready = get_dashboard_counts()
@@ -569,9 +607,8 @@ def scan():
 @app.route("/participants")
 def participants():
     return render_template(
-        "placeholder.html",
-        title="Participants",
-        message="Participant records will appear here after import support is added.",
+        "participants.html",
+        participants=get_participants(),
     )
 
 
