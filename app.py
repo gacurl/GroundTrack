@@ -225,6 +225,37 @@ def existing_badge_numbers():
     return {row["badge_number"] for row in rows}
 
 
+def participant_duplicate_key(participant):
+    return (
+        participant["name"] or "",
+        participant["rank"] or "",
+        participant["nat"] or "",
+        participant["organization"] or "",
+        participant["thread_initiative"] or "",
+    )
+
+
+def existing_participant_duplicate_keys():
+    rows = get_db().execute(
+        """
+        SELECT name, rank, nat, organization, thread_initiative
+        FROM participants
+        """
+    ).fetchall()
+    return {
+        participant_duplicate_key(
+            {
+                "name": row["name"],
+                "rank": row["rank"],
+                "nat": row["nat"],
+                "organization": row["organization"],
+                "thread_initiative": row["thread_initiative"],
+            }
+        )
+        for row in rows
+    }
+
+
 def row_to_participant(row_values, header_map):
     return {
         "source_row_no": import_cell(row_values, header_map, "No."),
@@ -302,9 +333,11 @@ def import_participants_from_workbook(file_storage):
 
     imported_count = 0
     skipped_count = 0
+    duplicate_skipped_count = 0
 
     try:
         seen_badges = existing_badge_numbers()
+        seen_participant_keys = existing_participant_duplicate_keys()
 
         for row_values in data_sheet.iter_rows(min_row=2, values_only=True):
             participant = row_to_participant(row_values, header_map)
@@ -314,12 +347,20 @@ def import_participants_from_workbook(file_storage):
                 skipped_count += 1
                 continue
 
+            participant_key = participant_duplicate_key(participant)
+            if participant_key in seen_participant_keys:
+                skipped_count += 1
+                duplicate_skipped_count += 1
+                continue
+
             if badge_number:
                 if badge_number in seen_badges:
                     skipped_count += 1
+                    duplicate_skipped_count += 1
                     continue
                 seen_badges.add(badge_number)
 
+            seen_participant_keys.add(participant_key)
             insert_participant(participant)
             imported_count += 1
 
@@ -334,7 +375,10 @@ def import_participants_from_workbook(file_storage):
 
     return (
         True,
-        f"Imported {imported_count} rows. Skipped {skipped_count} rows.",
+        (
+            f"Imported {imported_count} rows. Skipped {skipped_count} rows "
+            f"({duplicate_skipped_count} duplicates)."
+        ),
     )
 
 
