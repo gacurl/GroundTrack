@@ -9,6 +9,33 @@
     <p class="lead">Fast in-processing and out-processing support for event operators.</p>
   </section>
 
+  <section class="dashboard-stats" aria-labelledby="dashboard-stats-heading">
+    <div class="section-heading">
+      <h2 id="dashboard-stats-heading">Event Status</h2>
+      {% if not database_ready %}
+        <p class="status-note">Local database is not initialized yet.</p>
+      {% endif %}
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span>Total Participants</span>
+        <strong>{{ counts.total_participants }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Currently On Ground</span>
+        <strong>{{ counts.currently_on_ground }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Checked Out</span>
+        <strong>{{ counts.checked_out }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Walk-Up Participants</span>
+        <strong>{{ counts.walkup_participants }}</strong>
+      </div>
+    </div>
+  </section>
+
   <section class="quick-links" aria-labelledby="quick-links-heading">
     <h2 id="quick-links-heading">Operator Quick Links</h2>
     <div class="link-grid">
