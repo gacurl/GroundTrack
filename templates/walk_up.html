@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Walk-Up - GroundTrack{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+
+  <section class="page-header">
+    <p class="eyebrow">GroundTrack</p>
+    <h1>Walk-Up</h1>
+    <p class="lead">Add a participant who was not in the registration spreadsheet.</p>
+  </section>
+
+  {% if message %}
+    <div class="message message-{{ message_type }}" role="status">
+      {{ message }}
+    </div>
+  {% endif %}
+
+  <form class="data-form" action="{{ url_for('walk_up') }}" method="post">
+    <label for="name">Name <span class="required-label">Required</span></label>
+    <input id="name" name="name" type="text" value="{{ form.name }}" required autofocus>
+
+    <label for="rank">Rank</label>
+    <input id="rank" name="rank" type="text" value="{{ form.rank }}">
+
+    <label for="nat">NAT</label>
+    <input id="nat" name="nat" type="text" value="{{ form.nat }}">
+
+    <label for="visit_request_status">Visit Request Status</label>
+    <input
+      id="visit_request_status"
+      name="visit_request_status"
+      type="text"
+      value="{{ form.visit_request_status }}"
+    >
+
+    <label for="badge_number">Badge #</label>
+    <input id="badge_number" name="badge_number" type="text" value="{{ form.badge_number }}">
+
+    <label for="organization">Unit / Organization / Company</label>
+    <input id="organization" name="organization" type="text" value="{{ form.organization }}">
+
+    <label for="thread_initiative">Thread / Initiative</label>
+    <input
+      id="thread_initiative"
+      name="thread_initiative"
+      type="text"
+      value="{{ form.thread_initiative }}"
+    >
+
+    <button type="submit">Add Walk-Up Participant</button>
+  </form>
+{% endblock %}

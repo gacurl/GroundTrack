@@ -1,0 +1,146 @@
+import os
+import tempfile
+import unittest
+
+from app import app, get_db, init_db
+
+
+class WalkUpPageTest(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        app.config["DATABASE"] = os.path.join(
+            self.tempdir.name,
+            "groundtrack.sqlite",
+        )
+
+        with app.app_context():
+            init_db()
+
+        self.client = app.test_client()
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def add_participant(self, name, badge_number):
+        with app.app_context():
+            db = get_db()
+            db.execute(
+                """
+                INSERT INTO participants (name, badge_number, is_walkup)
+                VALUES (?, ?, ?)
+                """,
+                (name, badge_number, 0),
+            )
+            db.commit()
+
+    def test_walk_up_route_shows_form(self):
+        response = self.client.get("/walk-up")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Walk-Up", body)
+        self.assertIn("Add Walk-Up Participant", body)
+        self.assertIn('name="name"', body)
+        self.assertIn('name="badge_number"', body)
+        self.assertIn("← Back to Dashboard", body)
+
+    def test_valid_walk_up_creates_participant(self):
+        response = self.client.post(
+            "/walk-up",
+            data={
+                "name": " Ada Lovelace ",
+                "rank": " CPT ",
+                "nat": " US ",
+                "visit_request_status": "Approved",
+                "badge_number": " W100 ",
+                "organization": " Example Unit ",
+                "thread_initiative": " Alpha ",
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Added walk-up participant Ada Lovelace.", body)
+
+        with app.app_context():
+            row = get_db().execute(
+                """
+                SELECT name, rank, nat, visit_request_status, badge_number,
+                    organization, thread_initiative, is_walkup
+                FROM participants
+                WHERE badge_number = ?
+                """,
+                ("W100",),
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["name"], "Ada Lovelace")
+        self.assertEqual(row["rank"], "CPT")
+        self.assertEqual(row["nat"], "US")
+        self.assertEqual(row["visit_request_status"], "Approved")
+        self.assertEqual(row["organization"], "Example Unit")
+        self.assertEqual(row["thread_initiative"], "Alpha")
+        self.assertEqual(row["is_walkup"], 1)
+
+    def test_created_walk_up_appears_on_participants_page(self):
+        self.client.post(
+            "/walk-up",
+            data={
+                "name": "Grace Hopper",
+                "badge_number": "",
+            },
+        )
+
+        response = self.client.get("/participants")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Grace Hopper", body)
+        self.assertIn("Not Checked In", body)
+
+    def test_blank_name_is_rejected(self):
+        response = self.client.post(
+            "/walk-up",
+            data={
+                "name": "   ",
+                "badge_number": "W200",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Name is required.", body)
+
+        with app.app_context():
+            count = get_db().execute(
+                "SELECT COUNT(*) AS count FROM participants"
+            ).fetchone()["count"]
+
+        self.assertEqual(count, 0)
+
+    def test_duplicate_nonblank_badge_is_rejected(self):
+        self.add_participant("Existing Person", "W300")
+
+        response = self.client.post(
+            "/walk-up",
+            data={
+                "name": "New Person",
+                "badge_number": "W300",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Badge number already exists: W300.", body)
+
+        with app.app_context():
+            count = get_db().execute(
+                "SELECT COUNT(*) AS count FROM participants"
+            ).fetchone()["count"]
+
+        self.assertEqual(count, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

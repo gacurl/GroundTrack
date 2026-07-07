@@ -4,7 +4,7 @@ from datetime import date, datetime
 from zipfile import BadZipFile
 
 import click
-from flask import Flask, g, render_template, request
+from flask import Flask, g, redirect, render_template, request, url_for
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
@@ -326,6 +326,76 @@ def insert_participant(participant):
     )
 
 
+def form_value(name):
+    value = request.form.get(name, "").strip()
+    return value or None
+
+
+def blank_walk_up_form():
+    return {
+        "name": "",
+        "rank": "",
+        "nat": "",
+        "visit_request_status": "",
+        "badge_number": "",
+        "organization": "",
+        "thread_initiative": "",
+    }
+
+
+def walk_up_form_data():
+    return {
+        "name": form_value("name") or "",
+        "rank": form_value("rank") or "",
+        "nat": form_value("nat") or "",
+        "visit_request_status": form_value("visit_request_status") or "",
+        "badge_number": form_value("badge_number") or "",
+        "organization": form_value("organization") or "",
+        "thread_initiative": form_value("thread_initiative") or "",
+    }
+
+
+def create_walk_up_participant(participant):
+    db = get_db()
+    cursor = db.execute(
+        """
+        INSERT INTO participants (
+            name,
+            rank,
+            nat,
+            visit_request_status,
+            badge_number,
+            organization,
+            thread_initiative,
+            is_walkup
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            participant["name"],
+            participant["rank"] or None,
+            participant["nat"] or None,
+            participant["visit_request_status"] or None,
+            participant["badge_number"] or None,
+            participant["organization"] or None,
+            participant["thread_initiative"] or None,
+            1,
+        ),
+    )
+    db.execute(
+        """
+        INSERT INTO activity_log (participant_id, action, badge_number, note)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            cursor.lastrowid,
+            "WALK_UP_CREATE",
+            participant["badge_number"] or None,
+            "Walk-up participant created",
+        ),
+    )
+    db.commit()
+
+
 def import_participants_from_workbook(file_storage):
     workbook, data_sheet, header_map, error = open_import_workbook(file_storage)
     if error:
@@ -612,12 +682,46 @@ def participants():
     )
 
 
-@app.route("/walk-up")
+@app.route("/walk-up", methods=["GET", "POST"])
 def walk_up():
+    message = None
+    message_type = None
+    form = blank_walk_up_form()
+
+    if request.args.get("created"):
+        message = f"Added walk-up participant {request.args['created']}."
+        message_type = "success"
+
+    if request.method == "POST":
+        form = walk_up_form_data()
+
+        if not form["name"]:
+            message = "Name is required."
+            message_type = "error"
+        elif form["badge_number"]:
+            try:
+                if form["badge_number"] in existing_badge_numbers():
+                    message = f"Badge number already exists: {form['badge_number']}."
+                    message_type = "error"
+                else:
+                    create_walk_up_participant(form)
+                    return redirect(url_for("walk_up", created=form["name"]))
+            except sqlite3.OperationalError:
+                message = "Local database is not initialized. Run flask init-db first."
+                message_type = "error"
+        else:
+            try:
+                create_walk_up_participant(form)
+                return redirect(url_for("walk_up", created=form["name"]))
+            except sqlite3.OperationalError:
+                message = "Local database is not initialized. Run flask init-db first."
+                message_type = "error"
+
     return render_template(
-        "placeholder.html",
-        title="Walk-Up",
-        message="Walk-up participant entry will be added in a later milestone.",
+        "walk_up.html",
+        form=form,
+        message=message,
+        message_type=message_type,
     )
 
 
