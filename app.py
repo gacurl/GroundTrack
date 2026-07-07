@@ -1,8 +1,11 @@
 import os
 import sqlite3
+from zipfile import BadZipFile
 
 import click
-from flask import Flask, g, render_template
+from flask import Flask, g, render_template, request
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 
 app = Flask(__name__)
@@ -16,6 +19,19 @@ NAV_ITEMS = [
     ("participants", "Participants"),
     ("walk_up", "Walk-Up"),
     ("on_ground_report", "On-Ground Report"),
+]
+
+EXPECTED_IMPORT_COLUMNS = [
+    "No.",
+    "Name",
+    "Rank",
+    "NAT",
+    "Visit Request Status",
+    "Badge #",
+    "In-Process Date/Time",
+    "Out-Process Date/Time",
+    "Your Unit, Organization, or Company",
+    "Thread / Initiative",
 ]
 
 
@@ -110,6 +126,56 @@ def get_dashboard_counts():
     return counts, True
 
 
+def is_xlsx_file(filename):
+    return filename.lower().endswith(".xlsx")
+
+
+def cell_value_text(value):
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def count_data_rows(sheet):
+    row_count = 0
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if any(cell_value_text(value) for value in row):
+            row_count += 1
+    return row_count
+
+
+def validate_import_workbook(file_storage):
+    try:
+        workbook = load_workbook(file_storage, read_only=True, data_only=True)
+    except (BadZipFile, InvalidFileException, OSError):
+        return False, "The uploaded file could not be read as an .xlsx workbook."
+
+    try:
+        if "Data" not in workbook.sheetnames:
+            return False, "The workbook is missing the Data sheet."
+
+        data_sheet = workbook["Data"]
+        header_row = next(
+            data_sheet.iter_rows(min_row=1, max_row=1, values_only=True),
+            (),
+        )
+        found_columns = {cell_value_text(value) for value in header_row}
+        missing_columns = [
+            column for column in EXPECTED_IMPORT_COLUMNS if column not in found_columns
+        ]
+
+        if missing_columns:
+            return (
+                False,
+                "Missing expected columns: " + ", ".join(missing_columns),
+            )
+
+        data_row_count = count_data_rows(data_sheet)
+        return True, f"Spreadsheet validated. Found {data_row_count} data rows."
+    finally:
+        workbook.close()
+
+
 @app.route("/")
 def dashboard():
     counts, database_ready = get_dashboard_counts()
@@ -120,12 +186,29 @@ def dashboard():
     )
 
 
-@app.route("/import")
+@app.route("/import", methods=["GET", "POST"])
 def import_page():
+    message = None
+    message_type = None
+
+    if request.method == "POST":
+        upload = request.files.get("spreadsheet")
+
+        if upload is None or upload.filename == "":
+            message = "No file selected. Choose an .xlsx spreadsheet to upload."
+            message_type = "error"
+        elif not is_xlsx_file(upload.filename):
+            message = "File must be an .xlsx spreadsheet."
+            message_type = "error"
+        else:
+            is_valid, message = validate_import_workbook(upload)
+            message_type = "success" if is_valid else "error"
+
     return render_template(
-        "placeholder.html",
-        title="Import",
-        message="Spreadsheet import will be added in a later milestone.",
+        "import.html",
+        message=message,
+        message_type=message_type,
+        expected_columns=EXPECTED_IMPORT_COLUMNS,
     )
 
 
