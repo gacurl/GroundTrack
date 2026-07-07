@@ -42,9 +42,11 @@ class WalkUpPageTest(unittest.TestCase):
         self.assertIn("Add Walk-Up Participant", body)
         self.assertIn('name="name"', body)
         self.assertIn('name="badge_number"', body)
+        self.assertIn('name="check_in_now"', body)
+        self.assertIn("Check in now", body)
         self.assertIn("← Back to Dashboard", body)
 
-    def test_valid_walk_up_creates_participant(self):
+    def test_valid_walk_up_without_check_in_creates_not_checked_in_participant(self):
         response = self.client.post(
             "/walk-up",
             data={
@@ -67,7 +69,8 @@ class WalkUpPageTest(unittest.TestCase):
             row = get_db().execute(
                 """
                 SELECT name, rank, nat, visit_request_status, badge_number,
-                    organization, thread_initiative, is_walkup
+                    organization, thread_initiative, in_process_at,
+                    out_process_at, is_walkup
                 FROM participants
                 WHERE badge_number = ?
                 """,
@@ -81,6 +84,41 @@ class WalkUpPageTest(unittest.TestCase):
         self.assertEqual(row["visit_request_status"], "Approved")
         self.assertEqual(row["organization"], "Example Unit")
         self.assertEqual(row["thread_initiative"], "Alpha")
+        self.assertIsNone(row["in_process_at"])
+        self.assertIsNone(row["out_process_at"])
+        self.assertEqual(row["is_walkup"], 1)
+
+    def test_valid_walk_up_with_check_in_sets_in_process_at(self):
+        response = self.client.post(
+            "/walk-up",
+            data={
+                "name": "Katherine Johnson",
+                "badge_number": "W101",
+                "check_in_now": "1",
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn(
+            "Added walk-up participant Katherine Johnson and checked them in.",
+            body,
+        )
+
+        with app.app_context():
+            row = get_db().execute(
+                """
+                SELECT in_process_at, out_process_at, is_walkup
+                FROM participants
+                WHERE badge_number = ?
+                """,
+                ("W101",),
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertIsNotNone(row["in_process_at"])
+        self.assertIsNone(row["out_process_at"])
         self.assertEqual(row["is_walkup"], 1)
 
     def test_created_walk_up_appears_on_participants_page(self):
@@ -98,6 +136,23 @@ class WalkUpPageTest(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertIn("Grace Hopper", body)
         self.assertIn("Not Checked In", body)
+
+    def test_checked_in_walk_up_appears_on_ground_on_participants_page(self):
+        self.client.post(
+            "/walk-up",
+            data={
+                "name": "Mary Jackson",
+                "badge_number": "",
+                "check_in_now": "1",
+            },
+        )
+
+        response = self.client.get("/participants")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Mary Jackson", body)
+        self.assertIn("On Ground", body)
 
     def test_blank_name_is_rejected(self):
         response = self.client.post(
