@@ -74,6 +74,19 @@ a {
   padding: 32px 24px;
 }
 
+.back-link {
+  color: var(--accent-dark);
+  display: inline-block;
+  font-weight: 700;
+  margin-bottom: 24px;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus {
+  text-decoration: underline;
+}
+
 .page-header {
   margin-bottom: 32px;
 }
