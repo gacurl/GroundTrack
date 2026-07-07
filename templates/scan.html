@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Scan - GroundTrack{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+
+  <section class="page-header">
+    <p class="eyebrow">GroundTrack</p>
+    <h1>Scan</h1>
+    <p class="lead">Scan or enter a badge number, then choose an action.</p>
+  </section>
+
+  {% if message %}
+    <div class="message message-{{ message_type }}" role="status">
+      {{ message }}
+    </div>
+  {% endif %}
+
+  <form class="scan-form" action="{{ url_for('scan') }}" method="post">
+    <label for="badge_number">Badge number</label>
+    <input
+      class="scan-input"
+      id="badge_number"
+      name="badge_number"
+      type="text"
+      value="{{ badge_number }}"
+      placeholder="Scan badge or type badge number"
+      autocomplete="off"
+      autofocus
+    >
+
+    <div class="scan-actions">
+      <button class="scan-button scan-button-in" type="submit" name="action" value="check_in">
+        Check In
+      </button>
+      <button class="scan-button scan-button-out" type="submit" name="action" value="check_out">
+        Check Out
+      </button>
+    </div>
+  </form>
+{% endblock %}

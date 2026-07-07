@@ -193,6 +193,68 @@ h2 {
   margin-bottom: 6px;
 }
 
+.scan-form {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 760px;
+  padding: 24px;
+}
+
+.scan-form label {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.scan-input {
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  display: block;
+  font: inherit;
+  font-size: 34px;
+  margin-bottom: 20px;
+  padding: 16px;
+  width: 100%;
+}
+
+.scan-input:focus {
+  border-color: var(--accent);
+  outline: 4px solid rgba(23, 105, 170, 0.18);
+}
+
+.scan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.scan-button {
+  border: 0;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  min-width: 180px;
+  padding: 14px 22px;
+}
+
+.scan-button-in {
+  background: #2f7d32;
+}
+
+.scan-button-out {
+  background: var(--accent);
+}
+
+.scan-button:hover,
+.scan-button:focus {
+  filter: brightness(0.9);
+}
+
 .dashboard-stats {
   margin-bottom: 32px;
 }
@@ -290,5 +352,13 @@ h2 {
 
   .expected-columns ul {
     columns: 1;
+  }
+
+  .scan-input {
+    font-size: 26px;
+  }
+
+  .scan-button {
+    width: 100%;
   }
 }
