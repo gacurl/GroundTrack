@@ -30,7 +30,7 @@ class ParticipantsPageTest(unittest.TestCase):
     ):
         with app.app_context():
             db = get_db()
-            db.execute(
+            participant_id = db.execute(
                 """
                 INSERT INTO participants (
                     name,
@@ -57,8 +57,9 @@ class ParticipantsPageTest(unittest.TestCase):
                     out_process_at,
                     0,
                 ),
-            )
+            ).lastrowid
             db.commit()
+        return participant_id
 
     def test_participants_route_empty_state(self):
         response = self.client.get("/participants")
@@ -82,7 +83,7 @@ class ParticipantsPageTest(unittest.TestCase):
         self.assertIn("Participants", body)
 
     def test_participants_route_shows_seeded_participants(self):
-        self.add_participant("Ada Lovelace", badge_number="1001")
+        participant_id = self.add_participant("Ada Lovelace", badge_number="1001")
 
         response = self.client.get("/participants")
 
@@ -96,6 +97,7 @@ class ParticipantsPageTest(unittest.TestCase):
         self.assertIn("Example Unit", body)
         self.assertIn("Alpha", body)
         self.assertIn("Mission Area / Initiative", body)
+        self.assertIn(f'href="/participants/{participant_id}"', body)
 
     def test_participants_route_shows_status_text(self):
         self.add_participant(
