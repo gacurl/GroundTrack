@@ -770,23 +770,40 @@ def get_on_ground_participants():
     try:
         return get_db().execute(
             """
+            WITH newest_open_visit AS (
+                SELECT participant_id, MAX(id) AS visit_id
+                FROM participant_visits
+                WHERE out_process_at IS NULL
+                GROUP BY participant_id
+            )
             SELECT
-                name,
-                rank,
-                nat,
-                visit_request_status,
-                badge_number,
-                in_process_at,
-                organization,
-                thread_initiative
+                participants.name,
+                participants.rank,
+                participants.nat,
+                participants.visit_request_status,
+                participants.badge_number,
+                COALESCE(
+                    participant_visits.in_process_at,
+                    participants.in_process_at
+                ) AS in_process_at,
+                participants.organization,
+                participants.thread_initiative
             FROM participants
-            WHERE in_process_at IS NOT NULL
-                AND in_process_at != ''
-                AND (
-                    out_process_at IS NULL
-                    OR out_process_at = ''
+            LEFT JOIN newest_open_visit
+                ON newest_open_visit.participant_id = participants.id
+            LEFT JOIN participant_visits
+                ON participant_visits.id = newest_open_visit.visit_id
+            WHERE newest_open_visit.visit_id IS NOT NULL
+                OR (
+                    participants.in_process_at IS NOT NULL
+                    AND participants.in_process_at != ''
+                    AND (
+                        participants.out_process_at IS NULL
+                        OR participants.out_process_at = ''
+                        OR participants.out_process_at < participants.in_process_at
+                    )
                 )
-            ORDER BY name COLLATE NOCASE, id
+            ORDER BY participants.name COLLATE NOCASE, participants.id
             """
         ).fetchall()
     except sqlite3.OperationalError:
