@@ -26,6 +26,10 @@
         <strong>{{ counts.currently_on_ground }}</strong>
       </div>
       <div class="stat-card">
+        <span>Not Checked In</span>
+        <strong>{{ counts.not_checked_in }}</strong>
+      </div>
+      <div class="stat-card">
         <span>Checked Out</span>
         <strong>{{ counts.checked_out }}</strong>
       </div>
@@ -39,12 +43,8 @@
   <section class="quick-links" aria-labelledby="quick-links-heading">
     <h2 id="quick-links-heading">Operator Quick Links</h2>
     <div class="link-grid">
-      <a class="quick-link" href="{{ url_for('import_page') }}">
-        <strong>Import</strong>
-        <span>Load the event spreadsheet.</span>
-      </a>
       <a class="quick-link" href="{{ url_for('scan') }}">
-        <strong>Scan</strong>
+        <strong>Scan Check In / Check Out</strong>
         <span>Scan or enter badge numbers.</span>
       </a>
       <a class="quick-link" href="{{ url_for('participants') }}">
@@ -52,12 +52,20 @@
         <span>Review participant records.</span>
       </a>
       <a class="quick-link" href="{{ url_for('walk_up') }}">
-        <strong>Walk-Up</strong>
+        <strong>Add Walk-Up Participant</strong>
         <span>Add walk-up participants.</span>
       </a>
       <a class="quick-link" href="{{ url_for('on_ground_report') }}">
         <strong>On-Ground Report</strong>
         <span>See who is currently on ground.</span>
+      </a>
+      <a class="quick-link" href="{{ url_for('import_page') }}">
+        <strong>Import Spreadsheet</strong>
+        <span>Load the event spreadsheet.</span>
+      </a>
+      <a class="quick-link" href="{{ url_for('export_on_ground_csv') }}">
+        <strong>Export CSV</strong>
+        <span>Download the current on-ground list.</span>
       </a>
     </div>
   </section>

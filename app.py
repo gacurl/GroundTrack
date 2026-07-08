@@ -80,6 +80,7 @@ def get_dashboard_counts():
     counts = {
         "total_participants": 0,
         "currently_on_ground": 0,
+        "not_checked_in": 0,
         "checked_out": 0,
         "walkup_participants": 0,
     }
@@ -99,20 +100,23 @@ def get_dashboard_counts():
                             AND (
                                 out_process_at IS NULL
                                 OR out_process_at = ''
-                                OR out_process_at < in_process_at
                             )
                         THEN 1 ELSE 0
                     END
                 ) AS currently_on_ground,
                 SUM(
                     CASE
-                        WHEN out_process_at IS NOT NULL
+                        WHEN in_process_at IS NULL
+                            OR in_process_at = ''
+                        THEN 1 ELSE 0
+                    END
+                ) AS not_checked_in,
+                SUM(
+                    CASE
+                        WHEN in_process_at IS NOT NULL
+                            AND in_process_at != ''
+                            AND out_process_at IS NOT NULL
                             AND out_process_at != ''
-                            AND (
-                                in_process_at IS NULL
-                                OR in_process_at = ''
-                                OR out_process_at >= in_process_at
-                            )
                         THEN 1 ELSE 0
                     END
                 ) AS checked_out,
