@@ -21,6 +21,10 @@ instance/
 uploads/*
 !uploads/.gitkeep
 
+# Generated exports and spreadsheet data
+*.csv
+*.xlsx
+
 # Environment variables
 .env
 .env.*
