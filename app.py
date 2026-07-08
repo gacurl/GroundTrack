@@ -560,6 +560,35 @@ def find_participant_by_badge(badge_number):
     ).fetchone()
 
 
+def find_inactive_badge(badge_number):
+    try:
+        return get_db().execute(
+            """
+            SELECT
+                participants.name,
+                participants.badge_number AS current_badge,
+                badge_history.old_badge
+            FROM badge_history
+            JOIN participants
+                ON participants.id = badge_history.participant_id
+            WHERE badge_history.old_badge = ?
+            ORDER BY badge_history.id DESC
+            LIMIT 1
+            """,
+            (badge_number,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+
+
+def inactive_badge_message(badge_number, inactive_badge):
+    return (
+        f"Badge {badge_number} was replaced/lost and is no longer active. "
+        f"Current badge for {inactive_badge['name']} is "
+        f"{inactive_badge['current_badge']}."
+    )
+
+
 def check_in_participant(badge_number):
     try:
         participant = find_participant_by_badge(badge_number)
@@ -567,6 +596,9 @@ def check_in_participant(badge_number):
         return "error", "GroundTrack is not ready. Ask the event lead to complete setup."
 
     if participant is None:
+        inactive_badge = find_inactive_badge(badge_number)
+        if inactive_badge:
+            return "error", inactive_badge_message(badge_number, inactive_badge)
         return (
             "error",
             f"Badge {badge_number} was not found. Check the badge number and try again.",
@@ -624,6 +656,9 @@ def check_out_participant(badge_number):
         return "error", "GroundTrack is not ready. Ask the event lead to complete setup."
 
     if participant is None:
+        inactive_badge = find_inactive_badge(badge_number)
+        if inactive_badge:
+            return "error", inactive_badge_message(badge_number, inactive_badge)
         return (
             "error",
             f"Badge {badge_number} was not found. Check the badge number and try again.",
