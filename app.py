@@ -431,13 +431,25 @@ def create_walk_up_participant(participant):
             1,
         ),
     )
+    participant_id = cursor.lastrowid
+    if in_process_at:
+        db.execute(
+            """
+            INSERT INTO participant_visits (
+                participant_id,
+                in_process_at,
+                out_process_at
+            ) VALUES (?, ?, NULL)
+            """,
+            (participant_id, in_process_at),
+        )
     db.execute(
         """
         INSERT INTO activity_log (participant_id, action, badge_number, note)
         VALUES (?, ?, ?, ?)
         """,
         (
-            cursor.lastrowid,
+            participant_id,
             "WALK_UP_CREATE",
             participant["badge_number"] or None,
             "Walk-up participant created",
