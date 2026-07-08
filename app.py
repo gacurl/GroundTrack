@@ -466,15 +466,19 @@ def import_participants_from_workbook(file_storage):
         db = g.get("db")
         if db is not None:
             db.rollback()
-        return False, "Local database is not initialized. Run flask init-db first."
+        return False, "GroundTrack is not ready. Ask the event lead to complete setup."
     finally:
         workbook.close()
 
+    participant_label = "participant" if imported_count == 1 else "participants"
+    entry_label = "entry" if skipped_count == 1 else "entries"
+    duplicate_label = "duplicate" if duplicate_skipped_count == 1 else "duplicates"
     return (
         True,
         (
-            f"Imported {imported_count} rows. Skipped {skipped_count} rows "
-            f"({duplicate_skipped_count} duplicates)."
+            f"Imported {imported_count} {participant_label}. "
+            f"Skipped {skipped_count} {entry_label}, including "
+            f"{duplicate_skipped_count} {duplicate_label}."
         ),
     )
 
@@ -509,15 +513,18 @@ def check_in_participant(badge_number):
     try:
         participant = find_participant_by_badge(badge_number)
     except sqlite3.OperationalError:
-        return "error", "Local database is not initialized. Run flask init-db first."
+        return "error", "GroundTrack is not ready. Ask the event lead to complete setup."
 
     if participant is None:
-        return "error", f"Badge not found: {badge_number}."
+        return (
+            "error",
+            f"Badge {badge_number} was not found. Check the badge number and try again.",
+        )
 
     if is_currently_on_ground(participant):
         return (
             "already",
-            f"{participant['name']} is already checked in.",
+            f"{participant['name']} is already checked in. No changes were made.",
         )
 
     timestamp = local_timestamp()
@@ -553,15 +560,18 @@ def check_out_participant(badge_number):
     try:
         participant = find_participant_by_badge(badge_number)
     except sqlite3.OperationalError:
-        return "error", "Local database is not initialized. Run flask init-db first."
+        return "error", "GroundTrack is not ready. Ask the event lead to complete setup."
 
     if participant is None:
-        return "error", f"Badge not found: {badge_number}."
+        return (
+            "error",
+            f"Badge {badge_number} was not found. Check the badge number and try again.",
+        )
 
     if not is_currently_on_ground(participant):
         return (
             "not_on_ground",
-            f"{participant['name']} is not currently checked in.",
+            f"{participant['name']} is not currently checked in. No changes were made.",
         )
 
     timestamp = local_timestamp()
@@ -704,7 +714,7 @@ def scan():
         action = request.form.get("action")
 
         if not badge_number:
-            message = "Missing badge number."
+            message = "Enter or scan a badge number."
             message_type = "error"
         elif action == "check_in":
             check_in_status, message = check_in_participant(badge_number)
@@ -745,11 +755,13 @@ def walk_up():
     if request.args.get("created"):
         if request.args.get("checked_in"):
             message = (
-                f"Added walk-up participant {request.args['created']} "
-                "and checked them in."
+                f"Added {request.args['created']} and checked them in."
             )
         else:
-            message = f"Added walk-up participant {request.args['created']}."
+            message = (
+                f"Added {request.args['created']}. "
+                "They are not checked in."
+            )
         message_type = "success"
 
     if request.method == "POST":
@@ -765,20 +777,29 @@ def walk_up():
         elif form["badge_number"]:
             try:
                 if form["badge_number"] in existing_badge_numbers():
-                    message = f"Badge number already exists: {form['badge_number']}."
+                    message = (
+                        f"Badge {form['badge_number']} is already in use. "
+                        "Enter a different badge number."
+                    )
                     message_type = "error"
                 else:
                     create_walk_up_participant(form)
                     return walk_up_success_redirect(form)
             except sqlite3.OperationalError:
-                message = "Local database is not initialized. Run flask init-db first."
+                message = (
+                    "GroundTrack is not ready. "
+                    "Ask the event lead to complete setup."
+                )
                 message_type = "error"
         else:
             try:
                 create_walk_up_participant(form)
                 return walk_up_success_redirect(form)
             except sqlite3.OperationalError:
-                message = "Local database is not initialized. Run flask init-db first."
+                message = (
+                    "GroundTrack is not ready. "
+                    "Ask the event lead to complete setup."
+                )
                 message_type = "error"
 
     return render_template(
