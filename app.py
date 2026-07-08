@@ -6,8 +6,19 @@ from datetime import date, datetime
 from zipfile import BadZipFile
 
 import click
-from flask import Flask, Response, g, redirect, render_template, request, url_for
-from openpyxl import load_workbook
+from flask import (
+    Flask,
+    Response,
+    g,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 from openpyxl.utils.exceptions import InvalidFileException
 
 
@@ -35,6 +46,17 @@ EXPECTED_IMPORT_COLUMNS = [
     "Out-Process Date/Time",
     "Your Unit, Organization, or Company",
     "Thread / Initiative",
+]
+
+ON_GROUND_EXPORT_HEADERS = [
+    "Name",
+    "Rank",
+    "NAT",
+    "Visit Request Status",
+    "Badge #",
+    "In-Process Date/Time",
+    "Unit / Organization / Company",
+    "Mission Area / Initiative",
 ]
 
 
@@ -667,6 +689,19 @@ def get_on_ground_participants():
         return []
 
 
+def on_ground_export_row(participant):
+    return [
+        participant["name"],
+        participant["rank"] or "",
+        participant["nat"] or "",
+        participant["visit_request_status"] or "",
+        participant["badge_number"] or "",
+        participant["in_process_at"],
+        participant["organization"] or "",
+        participant["thread_initiative"] or "",
+    ]
+
+
 @app.route("/")
 def dashboard():
     counts, database_ready = get_dashboard_counts()
@@ -822,32 +857,10 @@ def on_ground_report():
 def export_on_ground_csv():
     output = io.StringIO(newline="")
     writer = csv.writer(output)
-    writer.writerow(
-        [
-            "Name",
-            "Rank",
-            "NAT",
-            "Visit Request Status",
-            "Badge #",
-            "In-Process Date/Time",
-            "Unit / Organization / Company",
-            "Mission Area / Initiative",
-        ]
-    )
+    writer.writerow(ON_GROUND_EXPORT_HEADERS)
 
     for participant in get_on_ground_participants():
-        writer.writerow(
-            [
-                participant["name"],
-                participant["rank"] or "",
-                participant["nat"] or "",
-                participant["visit_request_status"] or "",
-                participant["badge_number"] or "",
-                participant["in_process_at"],
-                participant["organization"] or "",
-                participant["thread_initiative"] or "",
-            ]
-        )
+        writer.writerow(on_ground_export_row(participant))
 
     return Response(
         output.getvalue(),
@@ -855,6 +868,41 @@ def export_on_ground_csv():
         headers={
             "Content-Disposition": "attachment; filename=on_ground_report.csv",
         },
+    )
+
+
+@app.route("/on-ground/export.xlsx")
+def export_on_ground_excel():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "On-Ground Report"
+    sheet.append(ON_GROUND_EXPORT_HEADERS)
+
+    for cell in sheet[1]:
+        cell.font = Font(bold=True)
+
+    for participant in get_on_ground_participants():
+        sheet.append(on_ground_export_row(participant))
+
+    column_widths = [28, 12, 12, 22, 16, 24, 32, 28]
+    for column_number, width in enumerate(column_widths, start=1):
+        sheet.column_dimensions[get_column_letter(column_number)].width = width
+
+    sheet.freeze_panes = "A2"
+
+    output = io.BytesIO()
+    workbook.save(output)
+    workbook.close()
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        as_attachment=True,
+        download_name="on_ground_report.xlsx",
     )
 
 

@@ -9,9 +9,14 @@
     <p class="eyebrow">GroundTrack</p>
     <h1>On-Ground Report</h1>
     <p class="lead">Participants currently checked in and not checked out.</p>
-    <a class="export-link" href="{{ url_for('export_on_ground_csv') }}">
-      Export CSV
-    </a>
+    <div class="export-actions">
+      <a class="export-link" href="{{ url_for('export_on_ground_csv') }}">
+        Export CSV
+      </a>
+      <a class="export-link" href="{{ url_for('export_on_ground_excel') }}">
+        Export Excel
+      </a>
+    </div>
   </section>
 
   {% if participants %}

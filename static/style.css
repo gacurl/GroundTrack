@@ -91,6 +91,12 @@ a {
   margin-bottom: 32px;
 }
 
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .export-link {
   background: var(--accent);
   border-radius: 4px;
