@@ -4,6 +4,8 @@ import os
 import tempfile
 import unittest
 
+from openpyxl import load_workbook
+
 from app import app, get_db, init_db
 
 
@@ -72,6 +74,8 @@ class OnGroundReportTest(unittest.TestCase):
         self.assertIn("← Back to Dashboard", body)
         self.assertIn('href="/on-ground/export.csv"', body)
         self.assertIn("Export CSV", body)
+        self.assertIn('href="/on-ground/export.xlsx"', body)
+        self.assertIn("Export Excel", body)
         self.assertNotIn("Thread / Initiative", body)
 
     def test_on_ground_route_only_shows_currently_on_ground(self):
@@ -187,6 +191,93 @@ class OnGroundReportTest(unittest.TestCase):
                 "Unit / Organization / Company",
                 "Mission Area / Initiative",
             ],
+        )
+
+    def test_excel_export_returns_only_currently_on_ground_participants(self):
+        self.add_participant(
+            "On Ground Person",
+            "1001",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at=None,
+        )
+        self.add_participant(
+            "Checked Out Person",
+            "1002",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_participant("Not Checked In Person", "1003")
+
+        response = self.client.get("/on-ground/export.xlsx")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.mimetype,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn(
+            "attachment; filename=on_ground_report.xlsx",
+            response.headers["Content-Disposition"],
+        )
+
+        workbook = load_workbook(io.BytesIO(response.data))
+        sheet = workbook["On-Ground Report"]
+        rows = list(sheet.iter_rows(values_only=True))
+        self.assertTrue(sheet["A1"].font.bold)
+        self.assertEqual(sheet.freeze_panes, "A2")
+        self.assertGreater(sheet.column_dimensions["A"].width, 10)
+        workbook.close()
+
+        self.assertEqual(
+            rows[0],
+            (
+                "Name",
+                "Rank",
+                "NAT",
+                "Visit Request Status",
+                "Badge #",
+                "In-Process Date/Time",
+                "Unit / Organization / Company",
+                "Mission Area / Initiative",
+            ),
+        )
+        self.assertEqual(
+            rows[1],
+            (
+                "On Ground Person",
+                "CPT",
+                "US",
+                "Approved",
+                "1001",
+                "2026-07-07 09:00:00",
+                "Example Unit",
+                "Alpha",
+            ),
+        )
+        self.assertEqual(len(rows), 2)
+
+    def test_empty_excel_export_returns_headers_only(self):
+        response = self.client.get("/on-ground/export.xlsx")
+
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(io.BytesIO(response.data), read_only=True)
+        sheet = workbook["On-Ground Report"]
+        rows = list(sheet.iter_rows(values_only=True))
+        workbook.close()
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(
+            rows[0],
+            (
+                "Name",
+                "Rank",
+                "NAT",
+                "Visit Request Status",
+                "Badge #",
+                "In-Process Date/Time",
+                "Unit / Organization / Company",
+                "Mission Area / Initiative",
+            ),
         )
 
 
