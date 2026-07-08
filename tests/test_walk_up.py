@@ -66,7 +66,7 @@ class WalkUpPageTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
-        self.assertIn("Added walk-up participant Ada Lovelace.", body)
+        self.assertIn("Added Ada Lovelace. They are not checked in.", body)
 
         with app.app_context():
             row = get_db().execute(
@@ -107,7 +107,7 @@ class WalkUpPageTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn(
-            "Added walk-up participant Katherine Johnson and checked them in.",
+            "Added Katherine Johnson and checked them in.",
             body,
         )
 
@@ -200,7 +200,10 @@ class WalkUpPageTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
-        self.assertIn("Badge number already exists: W300.", body)
+        self.assertIn(
+            "Badge W300 is already in use. Enter a different badge number.",
+            body,
+        )
 
         with app.app_context():
             count = get_db().execute(

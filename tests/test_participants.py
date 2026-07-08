@@ -66,7 +66,11 @@ class ParticipantsPageTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn("Participants", body)
-        self.assertIn("No participants have been imported yet.", body)
+        self.assertIn(
+            "No participants have been added yet. "
+            "Import a spreadsheet or add a walk-up participant.",
+            body,
+        )
         self.assertIn("← Back to Dashboard", body)
 
     def test_dashboard_links_to_participants(self):
