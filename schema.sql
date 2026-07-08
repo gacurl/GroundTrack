@@ -24,6 +24,18 @@ CREATE INDEX IF NOT EXISTS idx_participants_nat
 CREATE INDEX IF NOT EXISTS idx_participants_thread_initiative
     ON participants (thread_initiative);
 
+CREATE TABLE IF NOT EXISTS participant_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    participant_id INTEGER NOT NULL,
+    in_process_at TEXT,
+    out_process_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (participant_id) REFERENCES participants (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_participant_visits_participant_id
+    ON participant_visits (participant_id);
+
 CREATE TABLE IF NOT EXISTS activity_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     participant_id INTEGER,
