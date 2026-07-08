@@ -11,6 +11,12 @@
     <p class="lead">Current status: {{ participant.status }}</p>
   </section>
 
+  {% if message %}
+    <div class="message message-success" role="status">
+      {{ message }}
+    </div>
+  {% endif %}
+
   <dl class="detail-list">
     <div>
       <dt>Name</dt>
@@ -41,6 +47,14 @@
       <dd>{{ participant.thread_initiative or "—" }}</dd>
     </div>
   </dl>
+
+  <section class="participant-actions" aria-labelledby="participant-actions-heading">
+    <h2 id="participant-actions-heading">Badge</h2>
+    <a
+      class="export-link"
+      href="{{ url_for('replace_lost_badge', participant_id=participant.id) }}"
+    >Replace Lost Badge</a>
+  </section>
 
   <section class="visit-history" aria-labelledby="visit-history-heading">
     <h2 id="visit-history-heading">Visit History</h2>

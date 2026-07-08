@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Replace Lost Badge - GroundTrack{% endblock %}
+
+{% block content %}
+  <a
+    class="back-link"
+    href="{{ url_for('participant_detail', participant_id=participant.id) }}"
+  >← Back to Participant</a>
+
+  <section class="page-header">
+    <p class="eyebrow">Participant</p>
+    <h1>Replace Lost Badge</h1>
+    <p class="lead">{{ participant.name }}</p>
+    <p>Current badge: <strong>{{ participant.badge_number or "None" }}</strong></p>
+  </section>
+
+  {% if message %}
+    <div class="message message-error" role="status">
+      {{ message }}
+    </div>
+  {% endif %}
+
+  <form
+    class="data-form"
+    action="{{ url_for('replace_lost_badge', participant_id=participant.id) }}"
+    method="post"
+  >
+    <label for="new_badge_number">
+      New badge number <span class="required-label">Required</span>
+    </label>
+    <input
+      id="new_badge_number"
+      name="new_badge_number"
+      type="text"
+      value="{{ new_badge_number }}"
+      required
+      autofocus
+    >
+    <button type="submit">Replace Badge</button>
+  </form>
+{% endblock %}

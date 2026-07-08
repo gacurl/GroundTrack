@@ -254,6 +254,22 @@ def existing_badge_numbers():
     return {row["badge_number"] for row in rows}
 
 
+def badge_number_assigned_to_other_participant(badge_number, participant_id):
+    return (
+        get_db().execute(
+            """
+            SELECT id
+            FROM participants
+            WHERE badge_number = ?
+                AND id != ?
+            LIMIT 1
+            """,
+            (badge_number, participant_id),
+        ).fetchone()
+        is not None
+    )
+
+
 def participant_duplicate_key(participant):
     return (
         participant["name"] or "",
@@ -860,10 +876,77 @@ def participant_detail(participant_id):
     if participant is None:
         abort(404)
 
+    message = None
+    if request.args.get("badge_replaced"):
+        message = (
+            f"Badge replaced for {participant['name']}. "
+            f"New badge: {participant['badge_number']}"
+        )
+
     return render_template(
         "participant_detail.html",
         participant=participant,
         visits=get_participant_visits(participant_id),
+        message=message,
+    )
+
+
+@app.route(
+    "/participants/<int:participant_id>/replace-badge",
+    methods=["GET", "POST"],
+)
+def replace_lost_badge(participant_id):
+    participant = get_participant(participant_id)
+    if participant is None:
+        abort(404)
+
+    message = None
+    new_badge_number = ""
+
+    if request.method == "POST":
+        new_badge_number = request.form.get("new_badge_number", "").strip()
+
+        if not new_badge_number:
+            message = "Enter a new badge number."
+        elif new_badge_number == participant["badge_number"]:
+            message = (
+                "The new badge number matches the current badge. "
+                "No changes were made."
+            )
+        elif badge_number_assigned_to_other_participant(
+            new_badge_number,
+            participant_id,
+        ):
+            message = (
+                f"Badge {new_badge_number} is already in use. "
+                "Enter a different badge number."
+            )
+        else:
+            timestamp = local_timestamp()
+            db = get_db()
+            db.execute(
+                """
+                UPDATE participants
+                SET badge_number = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (new_badge_number, timestamp, participant_id),
+            )
+            db.commit()
+            return redirect(
+                url_for(
+                    "participant_detail",
+                    participant_id=participant_id,
+                    badge_replaced="1",
+                )
+            )
+
+    return render_template(
+        "replace_lost_badge.html",
+        participant=participant,
+        new_badge_number=new_badge_number,
+        message=message,
     )
 
 
