@@ -563,6 +563,16 @@ def check_in_participant(badge_number):
     )
     db.execute(
         """
+        INSERT INTO participant_visits (
+            participant_id,
+            in_process_at,
+            out_process_at
+        ) VALUES (?, ?, NULL)
+        """,
+        (participant["id"], timestamp),
+    )
+    db.execute(
+        """
         INSERT INTO activity_log (participant_id, action, badge_number, note)
         VALUES (?, ?, ?, ?)
         """,
