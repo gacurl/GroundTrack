@@ -9,6 +9,7 @@ import click
 from flask import (
     Flask,
     Response,
+    abort,
     g,
     redirect,
     render_template,
@@ -662,6 +663,7 @@ def get_participants():
         rows = get_db().execute(
             """
             SELECT
+                id,
                 name,
                 rank,
                 nat,
@@ -685,6 +687,52 @@ def get_participants():
         participants.append(participant)
 
     return participants
+
+
+def get_participant(participant_id):
+    try:
+        row = get_db().execute(
+            """
+            SELECT
+                id,
+                name,
+                rank,
+                nat,
+                visit_request_status,
+                badge_number,
+                organization,
+                thread_initiative,
+                in_process_at,
+                out_process_at
+            FROM participants
+            WHERE id = ?
+            """,
+            (participant_id,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+
+    if row is None:
+        return None
+
+    participant = dict(row)
+    participant["status"] = participant_status(row)
+    return participant
+
+
+def get_participant_visits(participant_id):
+    try:
+        return get_db().execute(
+            """
+            SELECT in_process_at, out_process_at
+            FROM participant_visits
+            WHERE participant_id = ?
+            ORDER BY id DESC
+            """,
+            (participant_id,),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
 
 
 def get_on_ground_participants():
@@ -803,6 +851,19 @@ def participants():
     return render_template(
         "participants.html",
         participants=get_participants(),
+    )
+
+
+@app.route("/participants/<int:participant_id>")
+def participant_detail(participant_id):
+    participant = get_participant(participant_id)
+    if participant is None:
+        abort(404)
+
+    return render_template(
+        "participant_detail.html",
+        participant=participant,
+        visits=get_participant_visits(participant_id),
     )
 
 

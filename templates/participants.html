@@ -29,7 +29,12 @@
         <tbody>
           {% for participant in participants %}
             <tr>
-              <td>{{ participant.name }}</td>
+              <td>
+                <a
+                  class="participant-link"
+                  href="{{ url_for('participant_detail', participant_id=participant.id) }}"
+                >{{ participant.name }}</a>
+              </td>
               <td>{{ participant.rank or "—" }}</td>
               <td>{{ participant.nat or "—" }}</td>
               <td>{{ participant.visit_request_status or "—" }}</td>

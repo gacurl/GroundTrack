@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}{{ participant.name }} - GroundTrack{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ url_for('participants') }}">← Back to Participants</a>
+
+  <section class="page-header">
+    <p class="eyebrow">Participant</p>
+    <h1>{{ participant.name }}</h1>
+    <p class="lead">Current status: {{ participant.status }}</p>
+  </section>
+
+  <dl class="detail-list">
+    <div>
+      <dt>Name</dt>
+      <dd>{{ participant.name }}</dd>
+    </div>
+    <div>
+      <dt>Rank</dt>
+      <dd>{{ participant.rank or "—" }}</dd>
+    </div>
+    <div>
+      <dt>NAT</dt>
+      <dd>{{ participant.nat or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Visit Request Status</dt>
+      <dd>{{ participant.visit_request_status or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Badge #</dt>
+      <dd>{{ participant.badge_number or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Unit / Organization / Company</dt>
+      <dd>{{ participant.organization or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Mission Area / Initiative</dt>
+      <dd>{{ participant.thread_initiative or "—" }}</dd>
+    </div>
+  </dl>
+
+  <section class="visit-history" aria-labelledby="visit-history-heading">
+    <h2 id="visit-history-heading">Visit History</h2>
+    {% if visits %}
+      <div class="table-wrap">
+        <table class="visit-table">
+          <thead>
+            <tr>
+              <th>In-Process Date/Time</th>
+              <th>Out-Process Date/Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for visit in visits %}
+              <tr>
+                <td>{{ visit.in_process_at or "—" }}</td>
+                <td>{{ visit.out_process_at or "—" }}</td>
+                <td>{{ "Closed" if visit.out_process_at else "Open" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">
+        No visit history has been recorded for this participant yet.
+      </p>
+    {% endif %}
+  </section>
+{% endblock %}
