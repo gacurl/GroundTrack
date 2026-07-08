@@ -1,6 +1,10 @@
+import csv
+import io
 import os
 import tempfile
 import unittest
+
+from openpyxl import load_workbook
 
 from app import app, get_db, init_db
 
@@ -91,7 +95,22 @@ class WalkUpPageTest(unittest.TestCase):
         self.assertIsNone(row["out_process_at"])
         self.assertEqual(row["is_walkup"], 1)
 
-    def test_valid_walk_up_with_check_in_sets_in_process_at(self):
+        with app.app_context():
+            open_visit_count = get_db().execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM participant_visits
+                WHERE participant_id = (
+                    SELECT id FROM participants WHERE badge_number = ?
+                )
+                    AND out_process_at IS NULL
+                """,
+                ("W100",),
+            ).fetchone()["count"]
+
+        self.assertEqual(open_visit_count, 0)
+
+    def test_valid_walk_up_with_check_in_sets_in_process_at_and_open_visit(self):
         response = self.client.post(
             "/walk-up",
             data={
@@ -114,17 +133,95 @@ class WalkUpPageTest(unittest.TestCase):
         with app.app_context():
             row = get_db().execute(
                 """
-                SELECT in_process_at, out_process_at, is_walkup
+                SELECT id, in_process_at, out_process_at, is_walkup
                 FROM participants
                 WHERE badge_number = ?
                 """,
                 ("W101",),
             ).fetchone()
+            visits = get_db().execute(
+                """
+                SELECT participant_id, in_process_at, out_process_at
+                FROM participant_visits
+                WHERE participant_id = ?
+                ORDER BY id
+                """,
+                (row["id"],),
+            ).fetchall()
 
         self.assertIsNotNone(row)
         self.assertIsNotNone(row["in_process_at"])
         self.assertIsNone(row["out_process_at"])
         self.assertEqual(row["is_walkup"], 1)
+        self.assertEqual(len(visits), 1)
+        self.assertEqual(visits[0]["participant_id"], row["id"])
+        self.assertEqual(visits[0]["in_process_at"], row["in_process_at"])
+        self.assertIsNone(visits[0]["out_process_at"])
+
+    def test_checked_in_walk_up_detail_shows_on_ground_and_open_visit(self):
+        self.client.post(
+            "/walk-up",
+            data={
+                "name": "Annie Easley",
+                "nat": "US",
+                "badge_number": "W104",
+                "thread_initiative": "Delta",
+                "check_in_now": "1",
+            },
+        )
+
+        with app.app_context():
+            row = get_db().execute(
+                """
+                SELECT id, in_process_at
+                FROM participants
+                WHERE badge_number = ?
+                """,
+                ("W104",),
+            ).fetchone()
+
+        response = self.client.get(f"/participants/{row['id']}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Current status: On Ground", body)
+        self.assertIn(row["in_process_at"], body)
+        self.assertIn("<td>Open</td>", body)
+
+    def test_checked_in_walk_up_appears_on_ground_report_and_exports(self):
+        self.client.post(
+            "/walk-up",
+            data={
+                "name": "Dorothy Vaughan",
+                "rank": "CIV",
+                "nat": "US",
+                "visit_request_status": "Approved",
+                "badge_number": "W105",
+                "organization": "Example Unit",
+                "thread_initiative": "Echo",
+                "check_in_now": "1",
+            },
+        )
+
+        report_response = self.client.get("/on-ground")
+        csv_response = self.client.get("/on-ground/export.csv")
+        excel_response = self.client.get("/on-ground/export.xlsx")
+
+        self.assertEqual(report_response.status_code, 200)
+        self.assertIn("Dorothy Vaughan", report_response.get_data(as_text=True))
+
+        self.assertEqual(csv_response.status_code, 200)
+        csv_rows = list(csv.reader(io.StringIO(csv_response.get_data(as_text=True))))
+        self.assertEqual(csv_rows[1][0], "Dorothy Vaughan")
+        self.assertEqual(csv_rows[1][4], "W105")
+
+        self.assertEqual(excel_response.status_code, 200)
+        workbook = load_workbook(io.BytesIO(excel_response.data), read_only=True)
+        sheet = workbook["On-Ground Report"]
+        excel_rows = list(sheet.iter_rows(values_only=True))
+        workbook.close()
+        self.assertEqual(excel_rows[1][0], "Dorothy Vaughan")
+        self.assertEqual(excel_rows[1][4], "W105")
 
     def test_created_walk_up_appears_on_participants_page(self):
         self.client.post(
