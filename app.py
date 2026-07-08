@@ -751,6 +751,21 @@ def get_participant_visits(participant_id):
         return []
 
 
+def get_badge_history(participant_id):
+    try:
+        return get_db().execute(
+            """
+            SELECT changed_at, old_badge, new_badge
+            FROM badge_history
+            WHERE participant_id = ?
+            ORDER BY id DESC
+            """,
+            (participant_id,),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+
 def get_on_ground_participants():
     try:
         return get_db().execute(
@@ -887,6 +902,7 @@ def participant_detail(participant_id):
         "participant_detail.html",
         participant=participant,
         visits=get_participant_visits(participant_id),
+        badge_history=get_badge_history(participant_id),
         message=message,
     )
 
@@ -932,6 +948,22 @@ def replace_lost_badge(participant_id):
                 WHERE id = ?
                 """,
                 (new_badge_number, timestamp, participant_id),
+            )
+            db.execute(
+                """
+                INSERT INTO badge_history (
+                    participant_id,
+                    old_badge,
+                    new_badge,
+                    changed_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    participant_id,
+                    participant["badge_number"],
+                    new_badge_number,
+                    timestamp,
+                ),
             )
             db.commit()
             return redirect(
