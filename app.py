@@ -619,6 +619,21 @@ def check_out_participant(badge_number):
     )
     db.execute(
         """
+        UPDATE participant_visits
+        SET out_process_at = ?
+        WHERE id = (
+            SELECT id
+            FROM participant_visits
+            WHERE participant_id = ?
+                AND out_process_at IS NULL
+            ORDER BY id DESC
+            LIMIT 1
+        )
+        """,
+        (timestamp, participant["id"]),
+    )
+    db.execute(
+        """
         INSERT INTO activity_log (participant_id, action, badge_number, note)
         VALUES (?, ?, ?, ?)
         """,
