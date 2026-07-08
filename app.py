@@ -632,7 +632,7 @@ def check_out_participant(badge_number):
     if not is_currently_on_ground(participant):
         return (
             "not_on_ground",
-            f"{participant['name']} is not currently checked in. No changes were made.",
+            f"{participant['name']} is not on ground. No changes were made.",
         )
 
     timestamp = local_timestamp()
