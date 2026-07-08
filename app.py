@@ -1,10 +1,12 @@
+import csv
+import io
 import os
 import sqlite3
 from datetime import date, datetime
 from zipfile import BadZipFile
 
 import click
-from flask import Flask, g, redirect, render_template, request, url_for
+from flask import Flask, Response, g, redirect, render_template, request, url_for
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
@@ -788,6 +790,46 @@ def on_ground_report():
     return render_template(
         "on_ground.html",
         participants=get_on_ground_participants(),
+    )
+
+
+@app.route("/on-ground/export.csv")
+def export_on_ground_csv():
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "Name",
+            "Rank",
+            "NAT",
+            "Visit Request Status",
+            "Badge #",
+            "In-Process Date/Time",
+            "Unit / Organization / Company",
+            "Mission Area / Initiative",
+        ]
+    )
+
+    for participant in get_on_ground_participants():
+        writer.writerow(
+            [
+                participant["name"],
+                participant["rank"] or "",
+                participant["nat"] or "",
+                participant["visit_request_status"] or "",
+                participant["badge_number"] or "",
+                participant["in_process_at"],
+                participant["organization"] or "",
+                participant["thread_initiative"] or "",
+            ]
+        )
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=on_ground_report.csv",
+        },
     )
 
 
