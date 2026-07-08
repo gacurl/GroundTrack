@@ -11,6 +11,20 @@
     <p class="lead">Imported participant records for event operations.</p>
   </section>
 
+  <form class="search-form" action="{{ url_for('participants') }}" method="get">
+    <label for="participant-search">Search participants</label>
+    <div class="search-row">
+      <input
+        id="participant-search"
+        name="q"
+        type="search"
+        value="{{ search_term }}"
+        placeholder="Name, badge, NAT, unit, or mission area"
+      >
+      <button type="submit">Search</button>
+    </div>
+  </form>
+
   {% if participants %}
     <div class="table-wrap">
       <table class="participants-table">
@@ -48,8 +62,14 @@
       </table>
     </div>
   {% else %}
-    <p class="empty-state">
-      No participants have been added yet. Import a spreadsheet or add a walk-up participant.
-    </p>
+    {% if search_term %}
+      <p class="empty-state">
+        No participants match "{{ search_term }}".
+      </p>
+    {% else %}
+      <p class="empty-state">
+        No participants have been added yet. Import a spreadsheet or add a walk-up participant.
+      </p>
+    {% endif %}
   {% endif %}
 {% endblock %}

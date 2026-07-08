@@ -686,25 +686,36 @@ def participant_status(participant):
     return "Not Checked In"
 
 
-def get_participants():
+def get_participants(search_term=None):
+    query = """
+        SELECT
+            id,
+            name,
+            rank,
+            nat,
+            visit_request_status,
+            badge_number,
+            organization,
+            thread_initiative,
+            in_process_at,
+            out_process_at
+        FROM participants
+    """
+    params = ()
+    if search_term:
+        query += """
+            WHERE name LIKE ?
+                OR badge_number LIKE ?
+                OR nat LIKE ?
+                OR organization LIKE ?
+                OR thread_initiative LIKE ?
+        """
+        like_term = f"%{search_term}%"
+        params = (like_term, like_term, like_term, like_term, like_term)
+    query += " ORDER BY name COLLATE NOCASE, id"
+
     try:
-        rows = get_db().execute(
-            """
-            SELECT
-                id,
-                name,
-                rank,
-                nat,
-                visit_request_status,
-                badge_number,
-                organization,
-                thread_initiative,
-                in_process_at,
-                out_process_at
-            FROM participants
-            ORDER BY name COLLATE NOCASE, id
-            """
-        ).fetchall()
+        rows = get_db().execute(query, params).fetchall()
     except sqlite3.OperationalError:
         return []
 
@@ -908,9 +919,11 @@ def scan():
 
 @app.route("/participants")
 def participants():
+    search_term = request.args.get("q", "").strip()
     return render_template(
         "participants.html",
-        participants=get_participants(),
+        participants=get_participants(search_term),
+        search_term=search_term,
     )
 
 

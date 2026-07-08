@@ -25,6 +25,9 @@ class ParticipantsPageTest(unittest.TestCase):
         self,
         name,
         badge_number=None,
+        nat="US",
+        organization="Example Unit",
+        thread_initiative="Alpha",
         in_process_at=None,
         out_process_at=None,
     ):
@@ -48,11 +51,11 @@ class ParticipantsPageTest(unittest.TestCase):
                 (
                     name,
                     "CPT",
-                    "US",
+                    nat,
                     "Approved",
                     badge_number,
-                    "Example Unit",
-                    "Alpha",
+                    organization,
+                    thread_initiative,
                     in_process_at,
                     out_process_at,
                     0,
@@ -122,6 +125,108 @@ class ParticipantsPageTest(unittest.TestCase):
         self.assertIn("Off Ground", body)
         self.assertIn("Not Checked In", body)
         self.assertIn("Mission Area / Initiative", body)
+
+    def test_participants_without_search_shows_full_list(self):
+        self.add_participant("Ada Lovelace", badge_number="1001")
+        self.add_participant("Grace Hopper", badge_number="1002")
+
+        response = self.client.get("/participants")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Ada Lovelace", body)
+        self.assertIn("Grace Hopper", body)
+
+    def test_search_by_name_returns_matching_participant(self):
+        self.add_participant("Ada Lovelace", badge_number="1001")
+        self.add_participant("Grace Hopper", badge_number="1002")
+
+        response = self.client.get("/participants?q=Ada")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Ada Lovelace", body)
+        self.assertNotIn("Grace Hopper", body)
+
+    def test_search_by_badge_number_returns_matching_participant(self):
+        self.add_participant("Ada Lovelace", badge_number="AL-100")
+        self.add_participant("Grace Hopper", badge_number="GH-200")
+
+        response = self.client.get("/participants?q=GH-200")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Grace Hopper", body)
+        self.assertNotIn("Ada Lovelace", body)
+
+    def test_search_by_nat_returns_matching_participant(self):
+        self.add_participant("Ada Lovelace", badge_number="1001", nat="GB")
+        self.add_participant("Grace Hopper", badge_number="1002", nat="US")
+
+        response = self.client.get("/participants?q=GB")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Ada Lovelace", body)
+        self.assertNotIn("Grace Hopper", body)
+
+    def test_search_by_organization_returns_matching_participant(self):
+        self.add_participant(
+            "Ada Lovelace",
+            badge_number="1001",
+            organization="Analytical Unit",
+        )
+        self.add_participant(
+            "Grace Hopper",
+            badge_number="1002",
+            organization="Compiler Group",
+        )
+
+        response = self.client.get("/participants?q=Compiler")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Grace Hopper", body)
+        self.assertNotIn("Ada Lovelace", body)
+
+    def test_search_by_mission_area_returns_matching_participant(self):
+        self.add_participant(
+            "Ada Lovelace",
+            badge_number="1001",
+            thread_initiative="Analytics",
+        )
+        self.add_participant(
+            "Grace Hopper",
+            badge_number="1002",
+            thread_initiative="Systems",
+        )
+
+        response = self.client.get("/participants?q=Systems")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Grace Hopper", body)
+        self.assertNotIn("Ada Lovelace", body)
+
+    def test_search_with_no_matches_shows_clear_empty_state(self):
+        self.add_participant("Ada Lovelace", badge_number="1001")
+
+        response = self.client.get("/participants?q=NoMatch")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('No participants match "NoMatch".', body)
+        self.assertNotIn("Ada Lovelace", body)
+
+    def test_search_term_remains_visible_after_submit(self):
+        self.add_participant("Ada Lovelace", badge_number="1001")
+
+        response = self.client.get("/participants?q=%20Ada%20")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('name="q"', body)
+        self.assertIn('value="Ada"', body)
 
 
 if __name__ == "__main__":
