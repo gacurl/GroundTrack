@@ -56,6 +56,36 @@
     >Replace Lost Badge</a>
   </section>
 
+  <section class="badge-history" aria-labelledby="badge-history-heading">
+    <h2 id="badge-history-heading">Badge History</h2>
+    {% if badge_history %}
+      <div class="table-wrap">
+        <table class="visit-table">
+          <thead>
+            <tr>
+              <th>Changed Date/Time</th>
+              <th>Old Badge #</th>
+              <th>New Badge #</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for badge_change in badge_history %}
+              <tr>
+                <td>{{ badge_change.changed_at }}</td>
+                <td>{{ badge_change.old_badge or "—" }}</td>
+                <td>{{ badge_change.new_badge }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">
+        No badge replacement history has been recorded for this participant yet.
+      </p>
+    {% endif %}
+  </section>
+
   <section class="visit-history" aria-labelledby="visit-history-heading">
     <h2 id="visit-history-heading">Visit History</h2>
     {% if visits %}

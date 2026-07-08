@@ -36,6 +36,18 @@ CREATE TABLE IF NOT EXISTS participant_visits (
 CREATE INDEX IF NOT EXISTS idx_participant_visits_participant_id
     ON participant_visits (participant_id);
 
+CREATE TABLE IF NOT EXISTS badge_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    participant_id INTEGER NOT NULL,
+    old_badge TEXT,
+    new_badge TEXT NOT NULL,
+    changed_at TEXT NOT NULL,
+    FOREIGN KEY (participant_id) REFERENCES participants (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_badge_history_participant_id
+    ON badge_history (participant_id);
+
 CREATE TABLE IF NOT EXISTS activity_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     participant_id INTEGER,

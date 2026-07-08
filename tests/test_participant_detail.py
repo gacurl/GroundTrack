@@ -91,6 +91,7 @@ class ParticipantDetailTest(unittest.TestCase):
             "Mission Area / Initiative",
             "Current status: Not Checked In",
             "No visit history has been recorded for this participant yet.",
+            "No badge replacement history has been recorded for this participant yet.",
             "← Back to Participants",
         ]:
             self.assertIn(expected_text, body)

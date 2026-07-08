@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from app import app, get_db, init_db
 
@@ -81,8 +82,10 @@ class BadgeReplacementTest(unittest.TestCase):
         self.assertIn("1001", body)
         self.assertIn('name="new_badge_number"', body)
 
+    @patch("app.local_timestamp", return_value="2026-07-09 10:30:00")
     def test_valid_replacement_updates_existing_participant_and_preserves_visits(
         self,
+        _timestamp,
     ):
         participant_id = self.add_participant("Ada Lovelace", "1001")
         visit_id = self.add_visit(participant_id)
@@ -118,6 +121,12 @@ class BadgeReplacementTest(unittest.TestCase):
                 FROM participant_visits
                 """
             ).fetchall()
+            badge_history = db.execute(
+                """
+                SELECT participant_id, old_badge, new_badge, changed_at
+                FROM badge_history
+                """
+            ).fetchall()
 
         self.assertEqual(len(participants), 1)
         self.assertEqual(participants[0]["id"], participant_id)
@@ -127,6 +136,11 @@ class BadgeReplacementTest(unittest.TestCase):
         self.assertEqual(visits[0]["participant_id"], participant_id)
         self.assertEqual(visits[0]["in_process_at"], "2026-07-08 09:00:00")
         self.assertEqual(visits[0]["out_process_at"], "2026-07-08 17:00:00")
+        self.assertEqual(len(badge_history), 1)
+        self.assertEqual(badge_history[0]["participant_id"], participant_id)
+        self.assertEqual(badge_history[0]["old_badge"], "1001")
+        self.assertEqual(badge_history[0]["new_badge"], "2002")
+        self.assertEqual(badge_history[0]["changed_at"], "2026-07-09 10:30:00")
 
     def test_blank_badge_is_rejected(self):
         participant_id = self.add_participant("Ada Lovelace", "1001")
@@ -142,6 +156,7 @@ class BadgeReplacementTest(unittest.TestCase):
             response.get_data(as_text=True),
         )
         self.assertEqual(self.current_badge(participant_id), "1001")
+        self.assertEqual(self.badge_history_count(participant_id), 0)
 
     def test_same_badge_is_rejected(self):
         participant_id = self.add_participant("Ada Lovelace", "1001")
@@ -158,6 +173,7 @@ class BadgeReplacementTest(unittest.TestCase):
             response.get_data(as_text=True),
         )
         self.assertEqual(self.current_badge(participant_id), "1001")
+        self.assertEqual(self.badge_history_count(participant_id), 0)
 
     def test_badge_assigned_to_another_participant_is_rejected(self):
         participant_id = self.add_participant("Ada Lovelace", "1001")
@@ -174,6 +190,7 @@ class BadgeReplacementTest(unittest.TestCase):
             response.get_data(as_text=True),
         )
         self.assertEqual(self.current_badge(participant_id), "1001")
+        self.assertEqual(self.badge_history_count(participant_id), 0)
 
     def test_missing_participant_returns_not_found(self):
         get_response = self.client.get("/participants/9999/replace-badge")
@@ -197,6 +214,17 @@ class BadgeReplacementTest(unittest.TestCase):
                 """,
                 (participant_id,),
             ).fetchone()["badge_number"]
+
+    def badge_history_count(self, participant_id):
+        with app.app_context():
+            return get_db().execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM badge_history
+                WHERE participant_id = ?
+                """,
+                (participant_id,),
+            ).fetchone()["count"]
 
 
 if __name__ == "__main__":

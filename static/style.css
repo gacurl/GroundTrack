@@ -419,6 +419,10 @@ h2 {
   margin-bottom: 32px;
 }
 
+.badge-history {
+  margin-bottom: 32px;
+}
+
 .empty-state {
   background: var(--panel);
   border: 1px solid var(--border);
