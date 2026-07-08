@@ -62,6 +62,46 @@ class OnGroundReportTest(unittest.TestCase):
                     0,
                 ),
             )
+            participant_id = db.execute(
+                "SELECT last_insert_rowid()"
+            ).fetchone()[0]
+            db.commit()
+            return participant_id
+
+    def add_visit(self, participant_id, in_process_at, out_process_at=None):
+        with app.app_context():
+            db = get_db()
+            db.execute(
+                """
+                INSERT INTO participant_visits (
+                    participant_id,
+                    in_process_at,
+                    out_process_at
+                ) VALUES (?, ?, ?)
+                """,
+                (participant_id, in_process_at, out_process_at),
+            )
+            db.commit()
+
+    def add_badge_history(self, participant_id, old_badge, new_badge):
+        with app.app_context():
+            db = get_db()
+            db.execute(
+                """
+                INSERT INTO badge_history (
+                    participant_id,
+                    old_badge,
+                    new_badge,
+                    changed_at
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    participant_id,
+                    old_badge,
+                    new_badge,
+                    "2026-07-07 12:00:00",
+                ),
+            )
             db.commit()
 
     def test_on_ground_route_empty_state(self):
@@ -120,6 +160,116 @@ class OnGroundReportTest(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertIn("Blank Out Process Person", body)
 
+    def test_on_ground_route_uses_open_visit_status_and_timestamp(self):
+        participant_id = self.add_participant(
+            "Return Visit Person",
+            "2001",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-08 08:30:00",
+            out_process_at=None,
+        )
+
+        response = self.client.get("/on-ground")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Return Visit Person", body)
+        self.assertIn("2026-07-08 08:30:00", body)
+        self.assertNotIn("2026-07-07 09:00:00", body)
+
+    def test_on_ground_route_excludes_closed_visit_when_not_on_ground(self):
+        participant_id = self.add_participant(
+            "Closed Visit Person",
+            "2002",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+
+        response = self.client.get("/on-ground")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertNotIn("Closed Visit Person", body)
+
+    def test_on_ground_route_includes_legacy_on_ground_without_visit(self):
+        self.add_participant(
+            "Legacy On Ground Person",
+            "2003",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at=None,
+        )
+
+        response = self.client.get("/on-ground")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Legacy On Ground Person", body)
+        self.assertIn("2026-07-07 09:00:00", body)
+
+    def test_on_ground_route_shows_current_badge_after_replacement(self):
+        participant_id = self.add_participant(
+            "Replacement Badge Person",
+            "3002",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at=None,
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-07 09:00:00",
+            out_process_at=None,
+        )
+        self.add_badge_history(participant_id, "3001", "3002")
+
+        response = self.client.get("/on-ground")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Replacement Badge Person", body)
+        self.assertIn("3002", body)
+        self.assertNotIn("3001", body)
+
+    def test_on_ground_route_does_not_duplicate_participant_for_visits_or_badge_history(self):
+        participant_id = self.add_participant(
+            "Duplicate Guard Person",
+            "4003",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at=None,
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-08 09:00:00",
+            out_process_at=None,
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-09 09:00:00",
+            out_process_at=None,
+        )
+        self.add_badge_history(participant_id, "4001", "4002")
+        self.add_badge_history(participant_id, "4002", "4003")
+
+        response = self.client.get("/on-ground")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertEqual(body.count("Duplicate Guard Person"), 1)
+        self.assertIn("2026-07-09 09:00:00", body)
+        self.assertNotIn("2026-07-08 09:00:00", body)
+
     def test_export_returns_only_currently_on_ground_participants(self):
         self.add_participant(
             "On Ground Person",
@@ -171,6 +321,26 @@ class OnGroundReportTest(unittest.TestCase):
             ],
         )
         self.assertEqual(len(rows), 2)
+
+    def test_csv_export_uses_open_visit_timestamp(self):
+        participant_id = self.add_participant(
+            "Return Visit Person",
+            "2001",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-08 08:30:00",
+            out_process_at=None,
+        )
+
+        response = self.client.get("/on-ground/export.csv")
+
+        self.assertEqual(response.status_code, 200)
+        rows = list(csv.reader(io.StringIO(response.get_data(as_text=True))))
+        self.assertEqual(rows[1][0], "Return Visit Person")
+        self.assertEqual(rows[1][5], "2026-07-08 08:30:00")
 
     def test_empty_export_returns_headers_only(self):
         response = self.client.get("/on-ground/export.csv")
@@ -255,6 +425,30 @@ class OnGroundReportTest(unittest.TestCase):
             ),
         )
         self.assertEqual(len(rows), 2)
+
+    def test_excel_export_uses_open_visit_timestamp(self):
+        participant_id = self.add_participant(
+            "Return Visit Person",
+            "2001",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-08 08:30:00",
+            out_process_at=None,
+        )
+
+        response = self.client.get("/on-ground/export.xlsx")
+
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(io.BytesIO(response.data), read_only=True)
+        sheet = workbook["On-Ground Report"]
+        rows = list(sheet.iter_rows(values_only=True))
+        workbook.close()
+
+        self.assertEqual(rows[1][0], "Return Visit Person")
+        self.assertEqual(rows[1][5], "2026-07-08 08:30:00")
 
     def test_empty_excel_export_returns_headers_only(self):
         response = self.client.get("/on-ground/export.xlsx")
