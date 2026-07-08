@@ -54,7 +54,7 @@ class StatusMessageTest(unittest.TestCase):
 
         response = self.post_scan("S100", "check_out")
         self.assertIn(
-            "Scan Person is not currently checked in. No changes were made.",
+            "Scan Person is not on ground. No changes were made.",
             response.get_data(as_text=True),
         )
 

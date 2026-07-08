@@ -172,7 +172,7 @@ class CheckOutVisitTest(unittest.TestCase):
         response = self.check_out("V203")
 
         self.assertIn(
-            "Already Checked Out is not currently checked in. No changes were made.",
+            "Already Checked Out is not on ground. No changes were made.",
             response.get_data(as_text=True),
         )
         with app.app_context():
