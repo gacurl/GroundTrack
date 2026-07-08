@@ -141,6 +141,79 @@ class ParticipantDetailTest(unittest.TestCase):
         self.assertIn("<td>Closed</td>", body)
         self.assertIn("2026-07-11 17:00:00", body)
 
+    def test_current_attendance_shows_on_ground_open_visit_timestamp(self):
+        participant_id = self.add_participant(
+            in_process_at="2026-08-12 09:30:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-01 08:00:00",
+            "2026-07-11 17:00:00",
+        )
+        self.add_visit(participant_id, "2026-08-12 09:45:00")
+
+        response = self.client.get(f"/participants/{participant_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("Current Attendance", body)
+        self.assertIn("<dt>Current Status</dt>", body)
+        self.assertIn("<dd>On Ground</dd>", body)
+        self.assertIn("<dt>Current In-Process Date/Time</dt>", body)
+        self.assertIn("<dd>2026-08-12 09:45:00</dd>", body)
+        self.assertIn("<dt>Current Out-Process Date/Time</dt>", body)
+        self.assertIn("<dd>—</dd>", body)
+
+    def test_current_attendance_shows_off_ground_latest_visit_timestamps(self):
+        participant_id = self.add_participant(
+            in_process_at="2026-08-12 09:30:00",
+            out_process_at="2026-08-12 17:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-07-01 08:00:00",
+            "2026-07-11 17:00:00",
+        )
+        self.add_visit(
+            participant_id,
+            "2026-08-12 09:45:00",
+            "2026-08-12 17:10:00",
+        )
+
+        response = self.client.get(f"/participants/{participant_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("<dd>Off Ground</dd>", body)
+        self.assertIn("<dd>2026-08-12 09:45:00</dd>", body)
+        self.assertIn("<dd>2026-08-12 17:10:00</dd>", body)
+
+    def test_current_attendance_shows_not_checked_in_without_timestamps(self):
+        participant_id = self.add_participant()
+
+        response = self.client.get(f"/participants/{participant_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("<dd>Not Checked In</dd>", body)
+        self.assertIn("<dt>Current In-Process Date/Time</dt>", body)
+        self.assertIn("<dt>Current Out-Process Date/Time</dt>", body)
+        self.assertGreaterEqual(body.count("<dd>—</dd>"), 2)
+
+    def test_current_attendance_uses_legacy_participant_timestamp_fallback(self):
+        participant_id = self.add_participant(
+            in_process_at="2026-08-12 09:30:00",
+            out_process_at="2026-08-12 17:00:00",
+        )
+
+        response = self.client.get(f"/participants/{participant_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn("<dd>Off Ground</dd>", body)
+        self.assertIn("<dd>2026-08-12 09:30:00</dd>", body)
+        self.assertIn("<dd>2026-08-12 17:00:00</dd>", body)
+
     def test_missing_participant_returns_not_found(self):
         response = self.client.get("/participants/9999")
 

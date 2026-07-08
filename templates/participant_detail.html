@@ -18,6 +18,24 @@
     </div>
   {% endif %}
 
+  <section class="attendance-summary" aria-labelledby="attendance-summary-heading">
+    <h2 id="attendance-summary-heading">Current Attendance</h2>
+    <dl class="detail-list">
+      <div>
+        <dt>Current Status</dt>
+        <dd>{{ attendance.status }}</dd>
+      </div>
+      <div>
+        <dt>Current In-Process Date/Time</dt>
+        <dd>{{ attendance.in_process_at or "—" }}</dd>
+      </div>
+      <div>
+        <dt>Current Out-Process Date/Time</dt>
+        <dd>{{ attendance.out_process_at or "—" }}</dd>
+      </div>
+    </dl>
+  </section>
+
   <dl class="detail-list">
     <div>
       <dt>Name</dt>

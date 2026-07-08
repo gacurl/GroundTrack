@@ -759,6 +759,31 @@ def get_participant(participant_id):
     return participant
 
 
+def current_attendance_summary(participant, visits):
+    summary = {
+        "status": participant["status"],
+        "in_process_at": participant["in_process_at"],
+        "out_process_at": participant["out_process_at"],
+    }
+
+    if visits:
+        if participant["status"] == "On Ground":
+            open_visit = next(
+                (visit for visit in visits if not visit["out_process_at"]),
+                None,
+            )
+            if open_visit:
+                summary["in_process_at"] = open_visit["in_process_at"]
+                summary["out_process_at"] = open_visit["out_process_at"]
+                return summary
+
+        latest_visit = visits[0]
+        summary["in_process_at"] = latest_visit["in_process_at"]
+        summary["out_process_at"] = latest_visit["out_process_at"]
+
+    return summary
+
+
 def get_participant_visits(participant_id):
     try:
         return get_db().execute(
@@ -932,6 +957,7 @@ def participant_detail(participant_id):
     participant = get_participant(participant_id)
     if participant is None:
         abort(404)
+    visits = get_participant_visits(participant_id)
 
     message = None
     if request.args.get("badge_replaced"):
@@ -943,7 +969,8 @@ def participant_detail(participant_id):
     return render_template(
         "participant_detail.html",
         participant=participant,
-        visits=get_participant_visits(participant_id),
+        attendance=current_attendance_summary(participant, visits),
+        visits=visits,
         badge_history=get_badge_history(participant_id),
         message=message,
     )
