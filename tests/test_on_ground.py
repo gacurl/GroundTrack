@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 import tempfile
 import unittest
@@ -68,6 +70,8 @@ class OnGroundReportTest(unittest.TestCase):
         self.assertIn("On-Ground Report", body)
         self.assertIn("Nobody is currently on ground.", body)
         self.assertIn("← Back to Dashboard", body)
+        self.assertIn('href="/on-ground/export.csv"', body)
+        self.assertIn("Export CSV", body)
         self.assertNotIn("Thread / Initiative", body)
 
     def test_on_ground_route_only_shows_currently_on_ground(self):
@@ -111,6 +115,79 @@ class OnGroundReportTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn("Blank Out Process Person", body)
+
+    def test_export_returns_only_currently_on_ground_participants(self):
+        self.add_participant(
+            "On Ground Person",
+            "1001",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at=None,
+        )
+        self.add_participant(
+            "Checked Out Person",
+            "1002",
+            in_process_at="2026-07-07 09:00:00",
+            out_process_at="2026-07-07 10:00:00",
+        )
+        self.add_participant("Not Checked In Person", "1003")
+
+        response = self.client.get("/on-ground/export.csv")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "text/csv")
+        self.assertIn(
+            "attachment; filename=on_ground_report.csv",
+            response.headers["Content-Disposition"],
+        )
+        rows = list(csv.reader(io.StringIO(response.get_data(as_text=True))))
+        self.assertEqual(
+            rows[0],
+            [
+                "Name",
+                "Rank",
+                "NAT",
+                "Visit Request Status",
+                "Badge #",
+                "In-Process Date/Time",
+                "Unit / Organization / Company",
+                "Mission Area / Initiative",
+            ],
+        )
+        self.assertEqual(
+            rows[1],
+            [
+                "On Ground Person",
+                "CPT",
+                "US",
+                "Approved",
+                "1001",
+                "2026-07-07 09:00:00",
+                "Example Unit",
+                "Alpha",
+            ],
+        )
+        self.assertEqual(len(rows), 2)
+
+    def test_empty_export_returns_headers_only(self):
+        response = self.client.get("/on-ground/export.csv")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "text/csv")
+        rows = list(csv.reader(io.StringIO(response.get_data(as_text=True))))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(
+            rows[0],
+            [
+                "Name",
+                "Rank",
+                "NAT",
+                "Visit Request Status",
+                "Badge #",
+                "In-Process Date/Time",
+                "Unit / Organization / Company",
+                "Mission Area / Initiative",
+            ],
+        )
 
 
 if __name__ == "__main__":
